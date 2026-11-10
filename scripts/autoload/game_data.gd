@@ -172,9 +172,9 @@ const ITEMS := {
 ## 관계도에서 천도복숭아를 4번 선물하면 의형제 가능. 놀기·고백(커플)과는 따로 셈
 const GIFT_MAX := 4
 ## 칸을 다 채운 뒤 고백 / 의형제 맺기 성공률. 실패하면 그 칸(하트 / 복숭아)이 처음부터
-const CONFESS_CHANCE_SAME := 0.65
+const CONFESS_CHANCE_SAME := 0.55
 const CONFESS_CHANCE_OTHER := 0.10
-const SWEAR_CHANCE_SAME := 0.65
+const SWEAR_CHANCE_SAME := 0.60
 const SWEAR_CHANCE_OTHER := 0.10
 const SWORN_MAX := 3                  # 한 멍냥이당 의형제 최대 3명 (주군도 똑같이)
 

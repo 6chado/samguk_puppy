@@ -67,8 +67,20 @@ const HeartButtonScript := preload("res://scripts/heart_button.gd")
 const PolyIconScript := preload("res://scripts/poly_icon.gd")
 var relation_button
 var relation_box: VBoxContainer
+var relation_scroll: ScrollContainer   # 관계가 많으면 이 안에서 손가락 스크롤
 
 const TutorialScript := preload("res://scripts/tutorial_layer.gd")
+const PhotoStageScript := preload("res://scripts/photo_stage.gd")
+var _photo_sel: Array[String] = []     # 고른 멍냥이 (고른 순서 = 왼쪽부터)
+var _photo_expr: Dictionary = {}      # dog_id -> 표정 이름
+var _photo_stage                       # 사진 무대
+var _photo_cards: Dictionary = {}      # dog_id -> 카드 버튼
+var _photo_expr_box: VBoxContainer
+var _photo_ui: Array = []
+var _photo_title := "삼국지 멍냥이"     # 사진 아래 글씨
+var _photo_form: Dictionary = {}      # dog_id -> 사진에서 쓸 모습 (0 아기 / 1 청년 / 2 어른)
+var _photo_bg := 0                    # 배경색 번호
+var _photo_bg_btns: Array = []              # 찰칵 모드에서 숨길 것들
 var tut                        # 튜토리얼 스포트라이트
 var _tut_step := -1
 var _tut_wait := ""            # 지금 단계가 기다리는 행동 (battle / fed / home / gacha_page / gacha_done)
@@ -256,6 +268,11 @@ func _show_home() -> void:
 	dex.custom_minimum_size = Vector2(0, 110)
 	dex.size_flags_horizontal = SIZE_EXPAND_FILL
 	row.add_child(dex)
+	var cam := _button("사진", _show_photo)
+	_set_button_icon(cam, "icon_camera")
+	cam.custom_minimum_size = Vector2(0, 110)
+	cam.size_flags_horizontal = SIZE_EXPAND_FILL
+	row.add_child(cam)
 
 
 ## 키우러 가기: 데리고 있는 멍냥이를 진영 탭별로
@@ -456,7 +473,7 @@ func _tut_next() -> void:
 		3:
 			tut.show_step("위는 경험치 바, 아래는 피로도 바예요.\n경험치가 차면 성장하고,\n피로도가 꽉 차면 잠을 자야 해요.", [exp_bar, fatigue_bar], false)
 		4:
-			tut.show_step("이쪽에는 이 멍냥이와 특별한 관계를 맺은 멍냥이들이 떠요!", [relation_box], false)
+			tut.show_step("이쪽에는 이 멍냥이와 특별한 관계를 맺은 멍냥이들이 떠요!", [relation_scroll], false)
 		5:
 			tut.show_step("이쪽에서 멍냥이들의 관계도를 볼 수 있어요!", [relation_button], false)
 		6:
@@ -513,6 +530,258 @@ func _do_reset() -> void:
 	_tab_faction = ""
 	_show_home()
 	_tut_start()
+
+
+# ═════════════════════════ 사진 찍기 ═════════════════════════
+
+func _show_photo() -> void:
+	_log("사진 화면")
+	var v := _new_page()
+	_photo_ui = []
+	_photo_cards = {}
+	var header_start := v.get_child_count()
+	_page_header(v, "← 홈", _show_home, "사진 찍기")
+	_photo_ui.append(v.get_child(header_start))
+
+	_photo_stage = PhotoStageScript.new()
+	_photo_stage.custom_minimum_size = Vector2(0, 520)
+	_photo_stage.size_flags_horizontal = SIZE_EXPAND_FILL
+	_photo_stage.title = _photo_title
+	_photo_stage.bg = _photo_bg
+	v.add_child(_photo_stage)
+
+	# 사진 아래 글씨 고치기
+	var title_row := HBoxContainer.new()
+	title_row.add_theme_constant_override("separation", 8)
+	v.add_child(title_row)
+	_photo_ui.append(title_row)
+	var edit := LineEdit.new()
+	edit.text = _photo_title
+	edit.placeholder_text = "사진에 넣을 글씨"
+	edit.max_length = 16
+	edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	edit.clear_button_enabled = true
+	edit.size_flags_horizontal = SIZE_EXPAND_FILL
+	edit.custom_minimum_size = Vector2(0, 56)
+	edit.add_theme_font_size_override("font_size", _fs(20))
+	edit.add_theme_color_override("font_color", TEXT_COLOR)
+	edit.add_theme_color_override("font_placeholder_color", SUB_COLOR)
+	edit.add_theme_color_override("caret_color", TEXT_COLOR)
+	edit.add_theme_color_override("clear_button_color", SUB_COLOR)
+	edit.add_theme_stylebox_override("normal", _card_box(Color(1, 0.98, 0.94), Color(0.86, 0.52, 0.32), 3))
+	edit.add_theme_stylebox_override("focus", _card_box(Color(1, 0.98, 0.94), PINK, 4))
+	edit.text_changed.connect(func(t: String) -> void:
+		_photo_title = t
+		_photo_stage.title = t)
+	edit.text_submitted.connect(func(_t: String) -> void: edit.release_focus())
+	title_row.add_child(edit)
+	# 배경색 (동그란 색 버튼)
+	_photo_bg_btns = []
+	for i in PhotoStageScript.BACKGROUNDS.size():
+		var sw := Button.new()
+		sw.custom_minimum_size = Vector2(46, 56)
+		sw.focus_mode = Control.FOCUS_NONE
+		sw.tooltip_text = PhotoStageScript.BACKGROUNDS[i][0]
+		sw.pressed.connect(_on_photo_bg.bind(i))
+		title_row.add_child(sw)
+		_photo_bg_btns.append(sw)
+
+	# 표정 고르기: 고른 멍냥이마다 한 줄씩 (이름 + 표정 버튼)
+	_photo_expr_box = VBoxContainer.new()
+	_photo_expr_box.add_theme_constant_override("separation", 6)
+	v.add_child(_photo_expr_box)
+	_photo_ui.append(_photo_expr_box)
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	v.add_child(scroll)
+	_photo_ui.append(scroll)
+	var grid := GridContainer.new()
+	grid.columns = 4
+	grid.size_flags_horizontal = SIZE_EXPAND_FILL
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	scroll.add_child(grid)
+	for fid in GameData.FACTION_ORDER:
+		for id in GameState.owned_in(fid):
+			var card := _dog_card(id, PuppyView.STAGE_FORM[GameState.stage_of(id)], GameData.DOGS[id]["name"], _on_photo_pick.bind(id))
+			card.custom_minimum_size = Vector2(0, 150)
+			card.add_theme_constant_override("icon_max_width", 92)
+			card.add_theme_font_size_override("font_size", _fs(20))
+			grid.add_child(card)
+			_photo_cards[id] = card
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	v.add_child(row)
+	_photo_ui.append(row)
+	var shoot := _button("찰칵!", _photo_capture_mode)
+	shoot.custom_minimum_size = Vector2(0, 100)
+	shoot.size_flags_horizontal = SIZE_EXPAND_FILL
+	shoot.add_theme_stylebox_override("normal", _box(PINK, 18))
+	shoot.add_theme_stylebox_override("hover", _box(PINK.lightened(0.1), 18))
+	shoot.add_theme_stylebox_override("pressed", _box(PINK.darkened(0.15), 18))
+	row.add_child(shoot)
+	var save := _button("사진 저장", _save_photo)
+	save.custom_minimum_size = Vector2(0, 100)
+	save.size_flags_horizontal = SIZE_EXPAND_FILL
+	row.add_child(save)
+
+	# 처음엔 지금 키우던 멍냥이 한 마리
+	_photo_sel = []
+	_photo_expr = {}
+	_photo_form = {}
+	if GameState.owns(GameState.current):
+		_photo_sel.append(GameState.current)
+	_photo_refresh()
+
+
+func _on_photo_pick(id: String) -> void:
+	if _photo_sel.has(id):
+		_photo_sel.erase(id)
+	elif _photo_sel.size() < 3:
+		_photo_sel.append(id)
+	else:
+		return   # 3마리까지
+	_photo_refresh()
+
+
+func _on_photo_bg(i: int) -> void:
+	_photo_bg = i
+	_photo_stage.bg = i
+	_photo_refresh()
+
+
+## 모습 바꾸기: 키운 데까지 아기 → 청년 → 어른 → 아기 ...
+func _on_photo_form(id: String) -> void:
+	var reached: int = PuppyView.STAGE_FORM[GameState.stage_of(id)]
+	_photo_form[id] = (int(_photo_form.get(id, reached)) + 1) % (reached + 1)
+	_photo_refresh()
+
+
+func _on_photo_expr(id: String, e: String) -> void:
+	_photo_expr[id] = e
+	_photo_refresh()
+
+
+## 고른 멍냥이·표정을 무대와 버튼에 반영
+func _photo_refresh() -> void:
+	var list: Array = []
+	for id in _photo_sel:
+		var reached: int = PuppyView.STAGE_FORM[GameState.stage_of(id)]
+		list.append({"id": id, "form": clampi(int(_photo_form.get(id, reached)), 0, reached), "expr": _photo_expr.get(id, "기본")})
+	_photo_stage.set_pets(list)
+	# 표정 줄 다시 만들기 (고른 순서대로)
+	for c in _photo_expr_box.get_children():
+		_photo_expr_box.remove_child(c)
+		c.queue_free()
+	for i in _photo_sel.size():
+		var id: String = _photo_sel[i]
+		var line := HBoxContainer.new()
+		line.add_theme_constant_override("separation", 5)
+		_photo_expr_box.add_child(line)
+		var nm := _label("%d %s" % [i + 1, GameData.DOGS[id]["name"]], 18)
+		nm.custom_minimum_size = Vector2(90, 0)
+		nm.clip_text = true
+		nm.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		line.add_child(nm)
+		# 모습 (누를 때마다 바뀜, 키운 단계까지만)
+		var reached: int = PuppyView.STAGE_FORM[GameState.stage_of(id)]
+		var form := clampi(int(_photo_form.get(id, reached)), 0, reached)
+		var fb := _button("%s ↔" % PhotoStageScript.FORM_NAMES[form] if reached > 0 else PhotoStageScript.FORM_NAMES[form],
+			_on_photo_form.bind(id))
+		fb.custom_minimum_size = Vector2(86, 52)
+		fb.add_theme_font_size_override("font_size", _fs(16))
+		fb.disabled = reached == 0
+		var fcol := Color(0.4, 0.62, 0.86) if reached > 0 else Color(0.72, 0.68, 0.64)
+		fb.add_theme_stylebox_override("normal", _box(fcol, 12))
+		fb.add_theme_stylebox_override("hover", _box(fcol.lightened(0.1), 12))
+		fb.add_theme_stylebox_override("disabled", _box(fcol, 12))
+		fb.add_theme_color_override("font_disabled_color", Color(1, 1, 1))
+		line.add_child(fb)
+		var cur: String = _photo_expr.get(id, "기본")
+		for e in PhotoStageScript.EXPRESSION_ORDER:
+			var b := _button(e, _on_photo_expr.bind(id, e))
+			b.custom_minimum_size = Vector2(0, 52)
+			b.size_flags_horizontal = SIZE_EXPAND_FILL
+			b.add_theme_font_size_override("font_size", _fs(16))
+			var col := PINK if e == cur else Color(0.86, 0.52, 0.32)
+			b.add_theme_stylebox_override("normal", _box(col, 12))
+			b.add_theme_stylebox_override("hover", _box(col.lightened(0.1), 12))
+			line.add_child(b)
+	# 배경색 버튼: 고른 건 테두리 굵게
+	for i in _photo_bg_btns.size():
+		var sw: Button = _photo_bg_btns[i]
+		var col: Color = PhotoStageScript.BACKGROUNDS[i][1]
+		var on := i == _photo_bg
+		for st in ["normal", "hover", "pressed"]:
+			sw.add_theme_stylebox_override(st, _card_box(col, PINK.darkened(0.1) if on else Color(0.86, 0.75, 0.66), 5 if on else 2))
+	for id in _photo_cards:
+		var card: Button = _photo_cards[id]
+		var idx := _photo_sel.find(id)
+		var name_s: String = GameData.DOGS[id]["name"]
+		card.text = name_s if idx < 0 else "%d · %s" % [idx + 1, name_s]
+		var border := PINK if idx >= 0 else Color(0.86, 0.52, 0.32)
+		var width := 7 if idx >= 0 else 4
+		card.add_theme_stylebox_override("normal", _card_box(Color(1, 0.98, 0.94), border, width))
+		card.add_theme_stylebox_override("hover", _card_box(Color(1, 0.95, 0.88), border, width))
+
+
+## 찰칵: 버튼·목록 다 숨기고 사진만 (화면을 누르면 돌아옴)
+func _photo_capture_mode() -> void:
+	if _photo_sel.is_empty():
+		return
+	for c in _photo_ui:
+		c.hide()
+	var flash := ColorRect.new()
+	flash.color = Color(1, 1, 1, 0.9)
+	flash.set_anchors_preset(PRESET_FULL_RECT)
+	flash.mouse_filter = MOUSE_FILTER_IGNORE
+	add_child(flash)
+	flash.create_tween().tween_property(flash, "color:a", 0.0, 0.35).finished.connect(flash.queue_free)
+	var catcher := Control.new()
+	catcher.set_anchors_preset(PRESET_FULL_RECT)
+	catcher.mouse_filter = MOUSE_FILTER_STOP
+	add_child(catcher)
+	var hint := _label("화면을 누르면 돌아가요", 20)
+	hint.add_theme_color_override("font_color", SUB_COLOR)
+	catcher.add_child(hint)
+	hint.set_anchors_and_offsets_preset(PRESET_CENTER_BOTTOM, PRESET_MODE_MINSIZE, 30)
+	hint.create_tween().tween_property(hint, "modulate:a", 0.0, 0.6).set_delay(1.2)   # 캡쳐에 안 찍히게 금방 사라짐
+	catcher.gui_input.connect(func(e: InputEvent) -> void:
+		if e is InputEventMouseButton and e.pressed:
+			catcher.queue_free()
+			for c in _photo_ui:
+				if is_instance_valid(c):
+					c.show())
+
+
+## 사진만 잘라서 저장 (웹: 바로 다운로드 / PC: 사진 폴더)
+func _save_photo() -> void:
+	if _photo_sel.is_empty():
+		return
+	await RenderingServer.frame_post_draw
+	var img := get_viewport().get_texture().get_image()
+	var vis := get_viewport().get_visible_rect().size
+	var k := Vector2(img.get_width() / vis.x, img.get_height() / vis.y)
+	var r: Rect2 = _photo_stage.get_global_rect()
+	var region := Rect2i(Vector2i(r.position * k), Vector2i(r.size * k)).intersection(Rect2i(Vector2i.ZERO, img.get_size()))
+	var shot := img.get_region(region)
+	var stamp := Time.get_datetime_string_from_system().replace(":", "").replace("-", "").replace("T", "_")
+	if OS.has_feature("web"):
+		JavaScriptBridge.download_buffer(shot.save_png_to_buffer(), "mengnyang_%s.png" % stamp, "image/png")
+		_open_overlay("사진 저장", "사진을 내려받았어요!", "home_notice")
+	else:
+		var dir := OS.get_system_dir(OS.SYSTEM_DIR_PICTURES)
+		if dir == "":
+			dir = OS.get_user_data_dir()
+		var path := dir.path_join("멍냥이사진_%s.png" % stamp)
+		var err := shot.save_png(path)
+		_open_overlay("사진 저장", ("사진을 저장했어요!\n%s" % path) if err == OK else "저장하지 못했어요..", "home_notice")
+	confirm_button.show()
+	_log("사진 저장")
 
 
 # ═════════════════════════ 뽑기 ═════════════════════════
@@ -700,10 +969,16 @@ func _build_raise_screen() -> void:
 	# 왼쪽 위: ♥ 애인 / 해골 앙숙. 누르면 설명창
 	relation_box = VBoxContainer.new()
 	relation_box.mouse_filter = MOUSE_FILTER_STOP
-	relation_box.add_theme_constant_override("separation", 6)
+	relation_box.add_theme_constant_override("separation", 4)
 	relation_box.gui_input.connect(_on_relation_box_input)
-	puppy_view.add_child(relation_box)
-	relation_box.position = Vector2(6, 6)
+	# 관계가 많아도 캐릭터·버튼을 덮지 않게: 높이를 제한한 스크롤 안에 넣음
+	relation_scroll = ScrollContainer.new()
+	relation_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	relation_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	relation_scroll.position = Vector2(6, 6)
+	puppy_view.add_child(relation_scroll)
+	relation_scroll.add_child(relation_box)
+	puppy_view.resized.connect(_fit_relation_scroll)
 
 	message_label = _label(" ", 28)
 	v.add_child(message_label)
@@ -1239,7 +1514,9 @@ const BOND_ORDER: Array[String] = ["peach", "heart", "trust", "family", "skull"]
 
 func _update_relations() -> void:
 	for c in relation_box.get_children():
+		relation_box.remove_child(c)
 		c.queue_free()
+	_fit_relation_scroll.call_deferred()
 	if puppy == null:
 		return
 	var me := puppy.dog_id
@@ -1254,6 +1531,20 @@ func _update_relations() -> void:
 		return a[0] < b[0])
 	for r in rows:
 		relation_box.add_child(_relation_row(r[2], r[1]))
+	_fit_relation_scroll.call_deferred()
+
+
+## 관계 목록 크기: 내용만큼, 단 화면 왼쪽 40% · 위쪽 45%까지만 (넘치면 스크롤)
+const RELATION_MAX_W := 0.45
+const RELATION_MAX_H := 0.45
+
+
+func _fit_relation_scroll() -> void:
+	if relation_scroll == null:
+		return
+	var content := relation_box.get_combined_minimum_size()
+	relation_scroll.size = Vector2(minf(content.x, puppy_view.size.x * RELATION_MAX_W),
+		minf(content.y, puppy_view.size.y * RELATION_MAX_H))
 
 
 ## 둘 사이의 모든 관계 (BOND_ORDER 순서)
@@ -1293,8 +1584,8 @@ func _relation_row(kinds: Array, other: String) -> Control:
 	row.mouse_filter = MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 6)
 	for kind in kinds:
-		row.add_child(_bond_icon(kind, 44))
-	var l := _label(GameData.DOGS[other]["name"], 30)
+		row.add_child(_bond_icon(kind, 40))
+	var l := _label(GameData.DOGS[other]["name"], 28)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	l.mouse_filter = MOUSE_FILTER_IGNORE
 	row.add_child(l)
