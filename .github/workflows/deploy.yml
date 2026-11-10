@@ -1,0 +1,38 @@
+# 게임(docs 폴더)을 GitHub Pages 에 올리는 자동 배포
+# - main 에 Push 하면 자동으로 실행 (docs 가 바뀌었을 때만)
+# - 올리는 도중에 새로 Push 하면 이전 배포는 취소하고 최신 것만 올림
+name: 게임 배포
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - id: deployment
+        uses: actions/deploy-pages@v4
+        
