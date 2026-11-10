@@ -575,6 +575,17 @@ func _show_photo() -> void:
 		_photo_stage.title = t)
 	edit.text_submitted.connect(func(_t: String) -> void: edit.release_focus())
 	title_row.add_child(edit)
+	# 웹(특히 폰)에서는 게임 입력칸에 키보드가 안 떠서 → 누르면 브라우저 기본 입력창으로 받음
+	if OS.has_feature("web"):
+		edit.editable = false
+		edit.focus_mode = Control.FOCUS_NONE
+		edit.clear_button_enabled = false
+		edit.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		edit.add_theme_stylebox_override("read_only", _card_box(Color(1, 0.98, 0.94), Color(0.86, 0.52, 0.32), 3))
+		edit.add_theme_color_override("font_uneditable_color", TEXT_COLOR)
+		edit.gui_input.connect(func(e: InputEvent) -> void:
+			if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and not e.pressed:
+				_photo_prompt_title(edit))
 	# 배경색 (동그란 색 버튼)
 	_photo_bg_btns = []
 	for i in PhotoStageScript.BACKGROUNDS.size():
@@ -646,6 +657,18 @@ func _on_photo_pick(id: String) -> void:
 	else:
 		return   # 3마리까지
 	_photo_refresh()
+
+
+## 웹: 브라우저 입력창(prompt)으로 글씨 받기 - 폰 키보드·한글 입력이 정상으로 됨
+func _photo_prompt_title(edit: LineEdit) -> void:
+	var js := "prompt(%s, %s)" % [JSON.stringify("사진에 넣을 글씨 (16자까지)"), JSON.stringify(_photo_title)]
+	var r = JavaScriptBridge.eval(js, true)
+	if r == null:
+		return   # 취소
+	var t := str(r).strip_edges().left(16)
+	_photo_title = t
+	edit.text = t
+	_photo_stage.title = t
 
 
 func _on_photo_bg(i: int) -> void:
