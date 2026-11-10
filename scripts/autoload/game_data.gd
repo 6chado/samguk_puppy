@@ -171,6 +171,11 @@ const ITEMS := {
 # ── 선물 / 의형제 ──────────────────────────────
 ## 관계도에서 천도복숭아를 4번 선물하면 의형제 가능. 놀기·고백(커플)과는 따로 셈
 const GIFT_MAX := 4
+## 칸을 다 채운 뒤 고백 / 의형제 맺기 성공률. 실패하면 그 칸(하트 / 복숭아)이 처음부터
+const CONFESS_CHANCE_SAME := 0.65
+const CONFESS_CHANCE_OTHER := 0.10
+const SWEAR_CHANCE_SAME := 0.65
+const SWEAR_CHANCE_OTHER := 0.10
 const SWORN_MAX := 3                  # 한 멍냥이당 의형제 최대 3명 (주군도 똑같이)
 
 # ── 신뢰 / 가족 ──────────────────────────────────
@@ -285,6 +290,14 @@ func affinity_max(a: String, b: String) -> int:
 ## 이 둘이 의형제하려면 복숭아 몇 개 (신뢰 관계면 하나 적음)
 func gift_max(a: String, b: String) -> int:
 	return GIFT_MAX - (TRUST_BONUS if is_trusted(a, b) else 0)
+
+
+func confess_chance(a: String, b: String) -> float:
+	return CONFESS_CHANCE_SAME if same_faction(a, b) else CONFESS_CHANCE_OTHER
+
+
+func swear_chance(a: String, b: String) -> float:
+	return SWEAR_CHANCE_SAME if same_faction(a, b) else SWEAR_CHANCE_OTHER
 
 
 func same_faction(a: String, b: String) -> bool:

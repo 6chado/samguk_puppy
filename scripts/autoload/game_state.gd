@@ -117,6 +117,12 @@ func play_together(a: String, b: String) -> bool:
 	return true
 
 
+## 고백 실패: 하트가 처음부터
+func reset_affinity(a: String, b: String) -> void:
+	affinity.erase(_pair_key(a, b))
+	save_now()
+
+
 func partners(dog_id: String) -> Array:
 	return couples.get(dog_id, [])
 
@@ -152,6 +158,12 @@ func give_peach(a: String, b: String) -> bool:
 	gifts[_pair_key(a, b)] = gift_count(a, b) + 1
 	save_now()
 	return true
+
+
+## 의형제 실패: 복숭아가 처음부터
+func reset_gifts(a: String, b: String) -> void:
+	gifts.erase(_pair_key(a, b))
+	save_now()
 
 
 func sworn_of(dog_id: String) -> Array:

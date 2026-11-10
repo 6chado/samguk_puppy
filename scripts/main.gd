@@ -1446,13 +1446,15 @@ func _relation_card(me: String, other: String) -> Control:
 		if GameState.affinity_of(me, other) < aff_max:
 			actions.add_child(_small_button("놀기", _on_play.bind(other), "", Color()))
 		else:
-			actions.add_child(_small_button("고백하기", _on_confess.bind(other), _confess_block_reason(me, other), PINK))
+			actions.add_child(_small_button("고백하기", _on_confess.bind(other), _confess_block_reason(me, other), PINK,
+				"성공 %d%%" % roundi(GameData.confess_chance(me, other) * 100)))
 	if not bonded:
 		if GameState.gift_count(me, other) < gift_max:
 			var no_peach := "복숭아가 없어요" if GameState.item_count("peach") <= 0 else ""
 			actions.add_child(_small_button("선물하기", _on_gift.bind(other), no_peach, Color(0.95, 0.6, 0.62)))
 		else:
-			actions.add_child(_small_button("의형제 맺기", _on_swear.bind(other), _swear_block_reason(me, other), Color(0.92, 0.5, 0.6)))
+			actions.add_child(_small_button("의형제 맺기", _on_swear.bind(other), _swear_block_reason(me, other), Color(0.92, 0.5, 0.6),
+				"성공 %d%%" % roundi(GameData.swear_chance(me, other) * 100)))
 	return row
 
 
@@ -1471,7 +1473,7 @@ func _tag(text: String, col: Color) -> Label:
 
 
 ## 관계도 카드 오른쪽 작은 버튼 (못 누르면 회색 + 아래에 이유)
-func _small_button(text: String, cb: Callable, block: String, col: Color) -> Control:
+func _small_button(text: String, cb: Callable, block: String, col: Color, note := "") -> Control:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 0)
 	var b := _button(text, cb)
@@ -1483,8 +1485,8 @@ func _small_button(text: String, cb: Callable, block: String, col: Color) -> Con
 		b.add_theme_stylebox_override("pressed", _box(col.darkened(0.15), 18))
 	b.disabled = block != ""
 	box.add_child(b)
-	if block != "":
-		var l := _label(block, 15)
+	if block != "" or note != "":
+		var l := _label(block if block != "" else note, 15)
 		l.add_theme_color_override("font_color", SUB_COLOR)
 		box.add_child(l)
 	return box
@@ -1550,6 +1552,14 @@ func _on_confess(other: String) -> void:
 	_set_busy(true)
 	_open_overlay("고백 중...", "%s ♥ %s\n\n두근두근..." % [me_name, other_name], "notice")
 	await get_tree().create_timer(1.0).timeout
+	if randf() >= GameData.confess_chance(me, other):
+		GameState.reset_affinity(me, other)
+		overlay_title.text = "고백이 실패했어요.."
+		overlay_log.text = "%s%s %s\n\n다른 좋은 털뭉치 만나..\n(하트가 처음으로 돌아갔어요)" % [other_name, _ig(other_name), "고개를 저었어요" ]
+		_log("고백 실패: %s - %s" % [me, other])
+		_update_relations()
+		confirm_button.show()
+		return
 	GameState.add_couple(me, other)
 	overlay_title.text = "커플이 되었습니다!"
 	overlay_log.text = "%s ♥ %s\n\n오늘부터 1일 ♥" % [me_name, other_name]
@@ -1572,6 +1582,14 @@ func _on_swear(other: String) -> void:
 	overlay_image.texture = FoodIcon.item_texture("item_peach")
 	overlay_image.show()
 	await get_tree().create_timer(1.0).timeout
+	if randf() >= GameData.swear_chance(me, other):
+		GameState.reset_gifts(me, other)
+		overlay_title.text = "의형제를 맺지 못했어요.."
+		overlay_log.text = "%s%s 아직 마음을 열지 않았어요.\n\n(복숭아가 처음으로 돌아갔어요)" % [other_name, _ig(other_name)]
+		_log("의형제 실패: %s - %s" % [me, other])
+		_update_relations()
+		confirm_button.show()
+		return
 	GameState.add_sworn(me, other)
 	overlay_title.text = "의형제가 되었어요!"
 	overlay_log.text = "%s, %s\n\n태어난 날은 달라도\n같은 날 같이 간식 먹자!" % [me_name, other_name]
