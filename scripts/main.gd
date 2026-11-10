@@ -60,12 +60,23 @@ var overlay_log: Label
 var strategy_box: HBoxContainer
 var drops_box: HBoxContainer
 var confirm_button: Button
+var cancel_button: Button      # 경고창에서만 보이는 "취소"
 var celebration: Celebration
 # 새로 추가한 스크립트는 class_name 등록이 늦을 수 있어서 preload 로 직접 불러옴
 const HeartButtonScript := preload("res://scripts/heart_button.gd")
 const PolyIconScript := preload("res://scripts/poly_icon.gd")
 var relation_button
 var relation_box: VBoxContainer
+
+const TutorialScript := preload("res://scripts/tutorial_layer.gd")
+var tut                        # 튜토리얼 스포트라이트
+var _tut_step := -1
+var _tut_wait := ""            # 지금 단계가 기다리는 행동 (battle / fed / home / gacha_page / gacha_done)
+var food_row: HBoxContainer
+var _home_gacha_btn: Button
+var _gacha_pull: Button
+var _gacha_ticket_row: Control
+var _gacha_ticket_label: Label
 
 var rel_overlay: Control
 var rel_title: Label
@@ -113,7 +124,12 @@ func _ready() -> void:
 	bag_list = b[2]
 	celebration = Celebration.new()  # 성장 연출 (맨 위, 터치는 통과)
 	add_child(celebration)
+	tut = TutorialScript.new()
+	add_child(tut)
+	tut.tapped.connect(_tut_next)
 	_show_home()
+	if not GameState.tutorial_done:
+		_tut_start()
 	_log("시작 완료")
 
 
@@ -180,6 +196,17 @@ func _grid(list: VBoxContainer) -> GridContainer:
 func _show_home() -> void:
 	_log("홈 화면")
 	var v := _new_page()
+	var top_row := HBoxContainer.new()
+	top_row.alignment = BoxContainer.ALIGNMENT_END
+	v.add_child(top_row)
+	var reset := _button("초기화", _ask_reset)
+	reset.custom_minimum_size = Vector2(110, 48)
+	reset.add_theme_font_size_override("font_size", _fs(18))
+	var grey := Color(0.72, 0.68, 0.64)
+	reset.add_theme_stylebox_override("normal", _box(grey, 14))
+	reset.add_theme_stylebox_override("hover", _box(grey.lightened(0.1), 14))
+	reset.add_theme_stylebox_override("pressed", _box(grey.darkened(0.15), 14))
+	top_row.add_child(reset)
 	v.add_child(_label("%s 삼국지 멍냥이 키우기 %s" % [CAT, CAT2], 37))
 
 	var ticket_row := HBoxContainer.new()
@@ -215,6 +242,7 @@ func _show_home() -> void:
 	row.add_theme_constant_override("separation", 12)
 	v.add_child(row)
 	var gacha := _button("뽑기", _show_gacha)
+	_home_gacha_btn = gacha
 	_set_button_icon(gacha, "ticket")
 	gacha.custom_minimum_size = Vector2(0, 110)
 	gacha.size_flags_horizontal = SIZE_EXPAND_FILL
@@ -394,6 +422,99 @@ func _dog_tex(dog_id: String, form: int) -> Texture2D:
 	return _tex_cache[path]
 
 
+# ═════════════════════════ 튜토리얼 ═════════════════════════
+
+const TUT_LAST := 12
+
+
+func _tut_start() -> void:
+	_log("튜토리얼 시작")
+	_tut_step = -1
+	_show_raise(GameState.current)
+	_tut_next()
+
+
+func _tut_next() -> void:
+	_tut_step += 1
+	_tut_wait = ""
+	if _tut_step > TUT_LAST:
+		tut.finish()
+		_tut_step = -1
+		GameState.tutorial_done = true
+		GameState.save_now()
+		_log("튜토리얼 끝")
+		return
+	match _tut_step:
+		0:
+			tut.show_step("삼국지 멍냥이들을 키워봐요 :)", [], false)
+		1:
+			_tut_wait = "battle"
+			tut.show_step("먼저 전투를 눌러 볼까요?\n이기면 음식을 얻어요!", [battle_button], true)
+		2:
+			_tut_wait = "fed"
+			tut.show_step("얻은 음식을 줘 보세요!", [food_row], true)
+		3:
+			tut.show_step("위는 경험치 바, 아래는 피로도 바예요.\n경험치가 차면 성장하고,\n피로도가 꽉 차면 잠을 자야 해요.", [exp_bar, fatigue_bar], false)
+		4:
+			tut.show_step("이쪽에는 이 멍냥이와 특별한 관계를 맺은 멍냥이들이 떠요!", [relation_box], false)
+		5:
+			tut.show_step("이쪽에서 멍냥이들의 관계도를 볼 수 있어요!", [relation_button], false)
+		6:
+			tut.show_step("가방에서는 특별한 아이템들을 사용할 수 있어요!", [bag_button], false)
+		7:
+			_tut_wait = "home"
+			tut.show_step("이제 홈으로 나가 볼까요?", [back_button], true)
+		8:
+			_tut_wait = "gacha_page"
+			tut.show_step("뽑기를 눌러 보세요!", [_home_gacha_btn], true)
+		9:
+			tut.show_step("여기서 새 멍냥이들을 만날 수 있어요.", [_gacha_machine], false)
+		10:
+			if GameState.give_start_bonus():
+				_gacha_ticket_label.text = "보유한 뽑기권  x%d" % GameState.tickets
+				if not GameState.unowned().is_empty():
+					_gacha_pull.disabled = false
+					_gacha_pull.text = "뽑기"
+			tut.show_step("뽑기권 x%d 증정!" % GameData.STARTING_TICKETS, [_gacha_ticket_row], false)
+		11:
+			_tut_wait = "gacha_done"
+			tut.show_step("뽑기를 눌러 볼까요?", [_gacha_pull], true)
+		12:
+			tut.show_step("열심히 멍냥이들을 키워\n모든 삼국지 멍냥이들을 만나봅시다 :)", [], false)
+
+
+## 튜토리얼이 기다리던 행동이 일어나면 다음 단계로
+func _tut_event(what: String) -> void:
+	if _tut_step >= 0 and _tut_wait == what:
+		_tut_next()
+
+
+## 초기화 경고창
+func _ask_reset() -> void:
+	_open_overlay("초기화", "모든 멍냥이 도감이 초기화됩니다.\n초기화 하시겠습니까?", "reset_confirm")
+	var red := Color(0.86, 0.32, 0.32)
+	confirm_button.text = "초기화"
+	confirm_button.add_theme_stylebox_override("normal", _box(red, 18))
+	confirm_button.add_theme_stylebox_override("hover", _box(red.lightened(0.1), 18))
+	confirm_button.add_theme_stylebox_override("pressed", _box(red.darkened(0.15), 18))
+	confirm_button.show()
+	cancel_button.show()
+
+
+## 진짜 처음으로: 저장 지우고 화면 상태도 싹 비움
+func _do_reset() -> void:
+	_log("전체 초기화")
+	GameState.reset_all()
+	if puppy and puppy.stage_changed.is_connected(_on_stage_changed):
+		puppy.stage_changed.disconnect(_on_stage_changed)
+	puppy = null
+	busy = false
+	_pending_gift = {}
+	_tab_faction = ""
+	_show_home()
+	_tut_start()
+
+
 # ═════════════════════════ 뽑기 ═════════════════════════
 
 const LEVER_PIVOT := Vector2(406.79, 353.92) / 512.0   # 손잡이 회전축 (그림 크기 대비 비율)
@@ -420,7 +541,9 @@ func _show_gacha() -> void:
 	ticket_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	ticket_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	ticket_row.add_child(ticket_icon)
-	ticket_row.add_child(_label("보유한 뽑기권  x%d" % GameState.tickets, 34))
+	_gacha_ticket_label = _label("보유한 뽑기권  x%d" % GameState.tickets, 34)
+	ticket_row.add_child(_gacha_ticket_label)
+	_gacha_ticket_row = ticket_row
 
 	# 뽑기 기계: 몸통 + 손잡이(같은 크기 그림을 겹쳐서 회전축 기준으로 돌림)
 	var center := CenterContainer.new()
@@ -453,6 +576,7 @@ func _show_gacha() -> void:
 	v.add_child(hint)
 
 	var pull := _button("뽑기", _on_gacha)
+	_gacha_pull = pull
 	pull.custom_minimum_size = Vector2(0, 120)
 	pull.add_theme_font_size_override("font_size", _fs(40))
 	pull.add_theme_stylebox_override("normal", _box(PINK, 18))
@@ -465,6 +589,7 @@ func _show_gacha() -> void:
 		pull.text = "뽑기권이 없어요"
 		pull.disabled = true     # 회색
 	v.add_child(pull)
+	_tut_event("gacha_page")
 
 
 func _on_gacha() -> void:
@@ -587,6 +712,7 @@ func _build_raise_screen() -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	v.add_child(row)
+	food_row = row
 	for food_id in GameData.FOOD_ORDER:
 		var b := _button("", _on_feed.bind(food_id))
 		b.size_flags_horizontal = SIZE_EXPAND_FILL
@@ -781,6 +907,7 @@ func _on_feed(food_id: String) -> void:
 	else:
 		_show_msg("%s 냠냠 %s" % [GameData.food_name(food_id, puppy.dog_id), "친밀도 +1" if puppy.is_adult() else "+%d exp" % food["exp"]])
 	_after_action()
+	_tut_event("fed")
 
 
 # ── 행동: 쓰다듬기 (횟수에 안 들어감) ──
@@ -907,6 +1034,10 @@ func _on_back() -> void:
 	if busy:
 		return
 	GameState.save_game()
+	if _tut_wait == "home":    # 튜토리얼: 홈으로 바로
+		_show_home()
+		_tut_event("home")
+		return
 	_show_roster()
 
 
@@ -1502,8 +1633,13 @@ func _build_overlay() -> void:
 		strategy_box.add_child(b)
 
 	confirm_button = _button("확인", _on_overlay_confirm)
+	cancel_button = _button("취소", func() -> void:
+		overlay.hide()
+		_overlay_mode = "")
+	cancel_button.custom_minimum_size = Vector2(0, 90)
 	confirm_button.custom_minimum_size = Vector2(0, 90)
 	v.add_child(confirm_button)
+	v.add_child(cancel_button)
 	overlay.hide()
 
 
@@ -1569,6 +1705,9 @@ func _open_overlay(title: String, text: String, mode: String) -> void:
 	strategy_box.hide()
 	confirm_button.hide()
 	confirm_button.text = "확인"
+	for key in ["normal", "hover", "pressed"]:
+		confirm_button.remove_theme_stylebox_override(key)
+	cancel_button.hide()
 	drops_box.hide()
 	for c in drops_box.get_children():
 		c.queue_free()
@@ -1583,8 +1722,12 @@ func _on_overlay_confirm() -> void:
 	match _overlay_mode:
 		"gacha":
 			_show_gacha()
+			_tut_event("gacha_done")
 			return
 		"home_notice":
+			return
+		"reset_confirm":
+			_do_reset()
 			return
 	_set_busy(false)
 	if _overlay_mode == "battle":
@@ -1592,6 +1735,7 @@ func _on_overlay_confirm() -> void:
 		if puppy.is_exhausted():
 			_show_msg("싸웠더니 너무 피곤해..")
 		_after_action()
+		_tut_event("battle")
 
 
 # ═════════════════════════ UI 헬퍼 ═════════════════════════

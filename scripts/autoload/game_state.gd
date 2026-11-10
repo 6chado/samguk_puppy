@@ -8,6 +8,7 @@ const SAVE_PATH := "user://save.json"
 var owned: Array[String] = []     # 데리고 있는 멍냥이 (= 도감에 모은 멍냥이)
 var tickets := 0                  # 뽑기권
 var start_bonus := false          # 처음 뽑기권(STARTING_TICKETS)을 이미 받았는지
+var tutorial_done := false        # 처음 튜토리얼을 끝냈는지 (새 게임 / 초기화 후엔 false)
 var rewarded: Dictionary = {}     # dog_id -> true (어른 선물 이미 받음)
 var current := ""                 # 홈 화면에 나와 있는 멍냥이
 var progress: Dictionary = {}     # dog_id -> Puppy
@@ -27,10 +28,18 @@ func _ready() -> void:
 			owned.append(id)
 	if current == "" or not owns(current):
 		current = owned[0]
-	if not start_bonus:   # 새 게임이든 예전 세이브든 처음 뽑기권은 딱 한 번
-		start_bonus = true
-		tickets += GameData.STARTING_TICKETS
-		save_now()
+	if not start_bonus and tutorial_done:   # 예전 세이브: 처음 뽑기권을 한 번 챙겨 줌 (새 게임은 튜토리얼에서 줌)
+		give_start_bonus()
+
+
+## 처음 뽑기권 (딱 한 번). 받았으면 true
+func give_start_bonus() -> bool:
+	if start_bonus:
+		return false
+	start_bonus = true
+	tickets += GameData.STARTING_TICKETS
+	save_now()
+	return true
 
 
 # ── 데리고 있는 멍냥이 ──
@@ -251,6 +260,7 @@ func save_now() -> bool:
 		"owned": owned,
 		"tickets": tickets,
 		"start_bonus": start_bonus,
+		"tutorial_done": tutorial_done,
 		"rewarded": rewarded.keys(),
 		"current": current,
 		"progress": prog,
@@ -371,6 +381,7 @@ func _apply(d: Dictionary) -> void:
 			owned.append(id)
 	tickets = clampi(tickets, 0, 999)
 	start_bonus = d.get("start_bonus", false) == true
+	tutorial_done = d.get("tutorial_done", true) == true   # 튜토리얼 생기기 전 세이브는 이미 한 걸로
 	current = str(d.get("current", ""))
 
 	affinity.clear()
@@ -450,8 +461,9 @@ func reset_all() -> void:
 	owned.clear()
 	for id in GameData.STARTERS:
 		owned.append(id)
-	tickets = GameData.STARTING_TICKETS
-	start_bonus = true
+	tickets = 0
+	start_bonus = false     # 처음 뽑기권은 튜토리얼에서 다시 줌
+	tutorial_done = false
 	rewarded.clear()
 	current = owned[0]
 	progress.clear()
@@ -462,3 +474,9 @@ func reset_all() -> void:
 	items.clear()
 	luck = 0
 	save_now()
+	# 백업에 예전 진행이 남아 있으면 나중에 복구될 수 있으니 같이 지움
+	var dir := DirAccess.open("user://")
+	if dir:
+		for path in [BAK_PATH, TMP_PATH, CORRUPT_PATH]:
+			if dir.file_exists(path.get_file()):
+				dir.remove(path.get_file())
