@@ -991,7 +991,7 @@ func _build_raise_screen() -> void:
 	_place_relation_button()
 	# 왼쪽 위: ♥ 애인 / 해골 앙숙. 누르면 설명창
 	relation_box = VBoxContainer.new()
-	relation_box.mouse_filter = MOUSE_FILTER_STOP
+	relation_box.mouse_filter = MOUSE_FILTER_PASS   # 끌면 스크롤로 넘어가게
 	relation_box.add_theme_constant_override("separation", 4)
 	relation_box.gui_input.connect(_on_relation_box_input)
 	# 관계가 많아도 캐릭터·버튼을 덮지 않게: 높이를 제한한 스크롤 안에 넣음
@@ -1616,10 +1616,24 @@ func _relation_row(kinds: Array, other: String) -> Control:
 
 
 ## 하트·복숭아·해골 누르면 설명창
+## 관계 목록: 손가락으로 끌면 스크롤, 콕 누르면(거의 안 움직이고 뗐을 때) 설명창
+var _rel_press := Vector2.INF
+var _rel_scroll_at := 0
+
+
 func _on_relation_box_input(event: InputEvent) -> void:
 	if busy:
 		return
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+	if not (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT):
+		return
+	if event.pressed:
+		_rel_press = event.global_position
+		_rel_scroll_at = relation_scroll.scroll_vertical
+		return
+	var tapped : bool = _rel_press != Vector2.INF and event.global_position.distance_to(_rel_press) < 16.0 \
+		and absi(relation_scroll.scroll_vertical - _rel_scroll_at) < 4
+	_rel_press = Vector2.INF
+	if tapped:
 		relation_box.accept_event()
 		_open_overlay("멍냥이 관계도", "복숭아는 의형제, 하트는 커플,\n방패는 신뢰, 집은 가족,\n해골은 앙숙이에요.", "notice")
 		for pair in [["peach", "의형제"], ["heart", "커플"], ["trust", "신뢰"], ["family", "가족"], ["skull", "앙숙"]]:
