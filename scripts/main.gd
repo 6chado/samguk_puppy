@@ -2540,10 +2540,18 @@ func _rec_face(id: String, side: float, dim := false) -> TextureRect:
 	t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	t.mouse_filter = MOUSE_FILTER_IGNORE
 	if not owned:
-		t.modulate = Color(0, 0, 0, 0.3)
+		t.material = _silhouette_mat()   # 회색 단색 그림자
 	elif dim:
 		t.modulate = Color(0.6, 0.6, 0.6, 0.55)
 	return t
+
+
+## 아직 안 데려온 멍냥이 이름은 ??? 로 가림
+func _mask_names(text: String, ids: Array) -> String:
+	for i in ids:
+		if not GameState.owns(i):
+			text = text.replace(str(GameData.DOGS[i]["name"]), "???")
+	return text
 
 
 func _rec_count(head: VBoxContainer, text: String, hint: String) -> void:
@@ -2758,11 +2766,11 @@ func _rec_stories(head: VBoxContainer, list: VBoxContainer) -> void:
 			var b := _sp_book(id)
 			title = b["title"]
 			faces = b["faces"]
-			hint = "%s · 공훈패 %d" % [b["cond"], GameData.SPECIAL_STORY_COST]
+			hint = "%s · 공훈패 %d" % [_mask_names(str(b["cond"]), b["faces"]), GameData.SPECIAL_STORY_COST]
 		else:
 			title = _story_book(id)["title"]
 			faces = [id] if id != GameData.CHOHAN_STORY else ["liu_bang", "xiang_yu"]
-			hint = STORY_HINTS.get(id, "")
+			hint = _mask_names(str(STORY_HINTS.get(id, "")), faces)
 		var seen := _story_seen(id)
 		var card := _card_row()
 		var h: HBoxContainer = card.get_child(0)
@@ -3001,7 +3009,9 @@ func _sp_card(id: String) -> Control:
 		t.custom_minimum_size = Vector2(78, 78)
 		t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		if not seen and not ok_:
+		if not GameState.owns(f):          # 아직 못 뽑은 애: 회색 단색 그림자
+			t.material = _silhouette_mat()
+		elif not seen and not ok_:         # 데려왔지만 조건 아직: 흐리게
 			t.modulate = Color(0.55, 0.55, 0.55, 0.6)
 		faces.add_child(t)
 	var info := VBoxContainer.new()
@@ -3011,7 +3021,7 @@ func _sp_card(id: String) -> Control:
 	var title := _label(book["title"] if seen else "???", 28)   # 제목은 끝까지 봐야 알 수 있음
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	info.add_child(title)
-	var cond := _label(("★ " if ok_ or seen else "") + str(book["cond"]), 18)
+	var cond := _label(("★ " if ok_ or seen else "") + _mask_names(str(book["cond"]), book["faces"]), 18)
 	cond.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	cond.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	cond.add_theme_color_override("font_color", Color(0.3, 0.6, 0.36) if ok_ or seen else SUB_COLOR)
