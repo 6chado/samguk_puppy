@@ -18,6 +18,17 @@ var gifts: Dictionary = {}        # "a|b" -> 천도복숭아 선물 횟수 0 ~ G
 var sworn: Dictionary = {}        # dog_id -> Array[String] 의형제 (양쪽 다 기록, 최대 SWORN_MAX)
 var items: Dictionary = {}        # item_id -> 개수 (희귀템 가방, 모든 멍냥이 공용)
 var luck := 0                     # 네잎클로버 효과 남은 전투·책략 횟수
+var sulky: Dictionary = {}        # "a|b" -> 토라진 멍냥이 id (헤어진 뒤, 클로버로 달래야 함)
+var clover_gifts: Dictionary = {} # "a|b" -> 화해용 클로버 받은 개수 (토라짐 / 앙숙)
+var made_up: Dictionary = {}      # "a|b" -> true  클로버로 화해한 앙숙 (기본 관계로 돌아감)
+var mini_cleared := 0             # 계책 대전에서 깬 가장 높은 단계 (0 = 아직, 다음 단계가 열림)
+var battle_exp: Dictionary = {}   # dog_id -> 전공 (대전할수록 쌓임 → 칭호)
+var stories: Dictionary = {}      # dog_id -> true  본 이야기 (도감에서 다시 보기)
+var defected: Dictionary = {}     # dog_id -> true  진영을 옮김 (하후패 → 촉, 사마의 → 진)
+var pair_wins: Dictionary = {}    # "a|b" -> 함께 이긴 횟수 (스페셜 칭호용)
+var sp_paid: Dictionary = {}       # 공훈패를 내고 연 스페셜 이야기 (끝까지 봐야 stories 에 들어감)
+var merits := 0                   # 공훈패 (대전에서 이기면 받음 → 스페셜 이야기 열기)
+var battle_tut_done := false      # 대전 튜토리얼을 봤는지 (보기 전엔 홈의 대전 버튼이 잠김)
 
 
 func _ready() -> void:
@@ -60,16 +71,45 @@ func stage_of(dog_id: String) -> int:
 func owned_in(faction: String) -> Array[String]:
 	var list: Array[String] = []
 	for id in GameData.DOGS:
-		if owns(id) and GameData.DOGS[id]["faction"] == faction:
+		if owns(id) and GameData.faction_of(id) == faction:
 			list.append(id)
 	return list
+
+
+# ── 이야기 ──
+func story_seen(dog_id: String) -> bool:
+	return stories.has(dog_id)
+
+
+func mark_story(dog_id: String) -> void:
+	stories[dog_id] = true
+	save_now()
+
+
+# ── 진영 옮기기 ──
+func has_defected(dog_id: String) -> bool:
+	return defected.has(dog_id)
+
+
+func defect(dog_id: String) -> void:
+	defected[dog_id] = true
+	save_now()
+
+
+## 도감 전체 수 (진이 안 열렸으면 진 멍냥이는 빼고)
+func dex_total() -> int:
+	var n := 0
+	for id in GameData.DOGS:
+		if GameData.available(id):
+			n += 1
+	return n
 
 
 # ── 뽑기 ──
 func unowned() -> Array[String]:
 	var list: Array[String] = []
 	for id in GameData.DOGS:
-		if not owns(id):
+		if not owns(id) and GameData.available(id):   # 진 멍냥이는 진이 열린 뒤에만
 			list.append(id)
 	return list
 
@@ -107,7 +147,7 @@ func affinity_of(a: String, b: String) -> int:
 
 ## 같이 놀기. 오르면 true
 func play_together(a: String, b: String) -> bool:
-	if GameData.is_rival(a, b) or affinity_of(a, b) >= GameData.affinity_max(a, b):
+	if GameData.is_rival(a, b) or is_sulky(a, b) or affinity_of(a, b) >= GameData.affinity_max(a, b):
 		return false
 	var chance: float = GameData.PLAY_CHANCE_SAME if GameData.same_faction(a, b) else GameData.PLAY_CHANCE_OTHER
 	if randf() >= chance:
@@ -145,16 +185,202 @@ func add_couple(a: String, b: String) -> void:
 	save_now()
 
 
+# ── 계책 대전 ──
+## 칭호 글자 (없으면 "")
+func title_of(dog_id: String) -> String:
+	return GameData.rank_name(dog_id, rank_of(dog_id))
+
+
+## 칭호 진행: {"exp", "lv", "max", "prev" (지금 칭호 기준 전공), "next" (다음 칭호 전공, 최고면 -1)}
+func rank_progress(dog_id: String) -> Dictionary:
+	var e := int(battle_exp.get(dog_id, 0))
+	var lv := rank_of(dog_id)
+	var top := GameData.rank_max(dog_id)
+	return {"exp": e, "lv": lv, "max": top,
+		"prev": GameData.RANK_EXP[lv - 1] if lv > 0 else 0,
+		"next": GameData.RANK_EXP[lv] if lv < top else -1}
+
+
+## 단체 칭호: 조건을 채운 멤버 수
+func group_count(g: Dictionary) -> int:
+	var n := 0
+	for m in g["members"]:
+		if owns(m) and rank_of(m) >= GameData.GROUP_RANK:
+			n += 1
+	return n
+
+
+func group_done(g: Dictionary) -> bool:
+	return group_count(g) >= (g["members"] as Array).size()
+
+
+## 이 멍냥이가 받은 단체 칭호 이름들
+func groups_done_of(dog_id: String) -> Array:
+	var out: Array = []
+	for g in GameData.groups_of(dog_id):
+		if group_done(g):
+			out.append(g["name"])
+	return out
+
+
+## 이 멍냥이가 받은 스페셜 칭호 이름들
+func specials_of(dog_id: String) -> Array:
+	var out: Array = []
+	for sp in GameData.SPECIAL_TITLES:
+		if (sp["a"] == dog_id or sp["b"] == dog_id) and pair_win_count(sp["a"], sp["b"]) >= int(sp["wins"]):
+			out.append(sp["name"])
+	return out
+
+
+func pair_win_count(a: String, b: String) -> int:
+	return int(pair_wins.get(_pair_key(a, b), 0))
+
+
+## 대전 열림 조건: 어른 무장 1 + 어른 책사 1 이 있음
+func battle_ready() -> bool:
+	var war := false
+	var strat := false
+	for id in owned:
+		if get_puppy(id).is_adult():
+			if GameData.is_strategist(id):
+				strat = true
+			else:
+				war = true
+	return war and strat
+
+
+func rank_of(dog_id: String) -> int:
+	return GameData.rank_level(dog_id, int(battle_exp.get(dog_id, 0)))
+
+
+## 대전 끝: 둘 다 전공 + (이기면) 보상.
+## {"won", "first", "reward", "n", "exp", "ranked": [칭호 오른 id]}
+func mini_result(won: bool, stage_i: int, war: String, strat: String) -> Dictionary:
+	var out := {"won": won, "first": false, "reward": "", "n": 0, "ranked": [], "special": "", "before": {}, "merit": 0, "drops": {}}
+	var gain := GameData.MINI_EXP_LOSE
+	if won:
+		var lv := stage_i + 1
+		out["first"] = lv > mini_cleared
+		# 처음 깼을 때만 단계 보너스
+		if out["first"]:
+			var reward: String = GameData.MINI_STAGES[stage_i]["reward"]
+			var n: int = int(GameData.MINI_STAGES[stage_i]["n"])
+			if reward == "ticket":
+				tickets += n
+			else:
+				items[reward] = item_count(reward) + n
+			out["reward"] = reward
+			out["n"] = n
+		# 보상 뽑기 (어려운 단계일수록 많이 뽑음)
+		var drops: Dictionary = out["drops"]
+		for i in int(GameData.MINI_STAGES[stage_i].get("rolls", 1)):
+			var got: String = GameData.roll_weighted(GameData.MINI_DROP)
+			drops[got] = int(drops.get(got, 0)) + 1
+			if got == "ticket":
+				tickets += 1
+			else:
+				items[got] = item_count(got) + 1
+		mini_cleared = maxi(mini_cleared, lv)
+		out["merit"] = int(GameData.MINI_STAGES[stage_i].get("merit", 1))
+		merits += int(out["merit"])
+		gain = int(GameData.MINI_STAGES[stage_i].get("exp", GameData.MINI_EXP_WIN_BASE + GameData.MINI_EXP_WIN_STEP * lv))
+		# 함께 이긴 횟수 → 스페셜 칭호
+		var key := _pair_key(war, strat)
+		pair_wins[key] = int(pair_wins.get(key, 0)) + 1
+		var sp: Dictionary = GameData.special_for(war, strat)
+		if not sp.is_empty() and int(pair_wins[key]) == int(sp["wins"]):
+			out["special"] = sp["name"]
+	out["exp"] = gain
+	var groups_before: Array = groups_done_of(war) + groups_done_of(strat)
+	for id in [war, strat]:
+		var before := rank_of(id)
+		(out["before"] as Dictionary)[id] = before
+		battle_exp[id] = int(battle_exp.get(id, 0)) + gain
+		if rank_of(id) > before:
+			(out["ranked"] as Array).append(id)
+	# 이번 판으로 새로 완성된 단체 칭호
+	var new_groups: Array = []
+	for name_ in groups_done_of(war) + groups_done_of(strat):
+		if not groups_before.has(name_) and not new_groups.has(name_):
+			new_groups.append(name_)
+	out["groups"] = new_groups
+	save_now()
+	return out
+
+
+# ── 헤어지기 / 토라짐 / 클로버 화해 ──
+func is_sulky(a: String, b: String) -> bool:
+	return sulky.has(_pair_key(a, b))
+
+
+## 토라진 쪽 id (없으면 "")
+func sulker(a: String, b: String) -> String:
+	return str(sulky.get(_pair_key(a, b), ""))
+
+
+func is_made_up(a: String, b: String) -> bool:
+	return made_up.has(_pair_key(a, b))
+
+
+func clover_count(a: String, b: String) -> int:
+	return int(clover_gifts.get(_pair_key(a, b), 0))
+
+
+## me 가 other 와 헤어짐 → other 가 토라짐. 하트도 처음부터
+func break_up(me: String, other: String) -> void:
+	for pair in [[me, other], [other, me]]:
+		var list: Array = couples.get(pair[0], [])
+		list.erase(pair[1])
+		if list.is_empty():
+			couples.erase(pair[0])
+		else:
+			couples[pair[0]] = list
+	var key := _pair_key(me, other)
+	affinity.erase(key)
+	sulky[key] = other
+	clover_gifts.erase(key)
+	save_now()
+
+
+## 화해용 클로버 하나 주기. 다 채우면 화해 → "done", 하나 줬으면 "gave", 못 주면 ""
+func give_clover(a: String, b: String) -> String:
+	if item_count("clover") <= 0 or not (is_sulky(a, b) or GameData.is_rival(a, b)):
+		return ""
+	items["clover"] = item_count("clover") - 1
+	var key := _pair_key(a, b)
+	var n := clover_count(a, b) + 1
+	if n < GameData.MAKEUP_CLOVERS:
+		clover_gifts[key] = n
+		save_now()
+		return "gave"
+	clover_gifts.erase(key)
+	if sulky.has(key):
+		sulky.erase(key)
+	else:
+		made_up[key] = true
+	save_now()
+	return "done"
+
+
 # ── 선물 / 의형제 ──
 func gift_count(a: String, b: String) -> int:
 	return int(gifts.get(_pair_key(a, b), 0))
 
 
 ## 천도복숭아 하나를 선물. 가방에서 빠지고 선물 횟수 +1
+## 선물할 수 있는 복숭아 (천도 + 황금)
+func peach_total() -> int:
+	return item_count("peach") + item_count("golden_peach")
+
+
+var last_gift := "peach"   # 방금 선물한 복숭아 종류 (천도복숭아 먼저, 없으면 황금복숭아)
+
+
 func give_peach(a: String, b: String) -> bool:
-	if GameData.is_rival(a, b) or gift_count(a, b) >= GameData.gift_max(a, b) or item_count("peach") <= 0:
+	if GameData.is_rival(a, b) or is_sulky(a, b) or gift_count(a, b) >= GameData.gift_max(a, b) or peach_total() <= 0:
 		return false
-	items["peach"] = item_count("peach") - 1
+	last_gift = "peach" if item_count("peach") > 0 else "golden_peach"
+	items[last_gift] = item_count(last_gift) - 1
 	gifts[_pair_key(a, b)] = gift_count(a, b) + 1
 	save_now()
 	return true
@@ -282,6 +508,17 @@ func save_now() -> bool:
 		"sworn": sworn,
 		"items": items,
 		"luck": luck,
+		"sulky": sulky,
+		"clover_gifts": clover_gifts,
+		"made_up": made_up.keys(),
+		"mini_cleared": mini_cleared,
+		"merits": merits,
+		"sp_paid": sp_paid.keys(),
+		"battle_exp": battle_exp,
+		"battle_tut_done": battle_tut_done,
+		"pair_wins": pair_wins,
+		"defected": defected.keys(),
+		"stories": stories.keys(),
 	}
 	var text := JSON.stringify(data)
 	# 1) 임시 파일에 쓰기
@@ -404,6 +641,39 @@ func _apply(d: Dictionary) -> void:
 			if parts.size() == 2 and GameData.DOGS.has(parts[0]) and GameData.DOGS.has(parts[1]) and parts[0] != parts[1]:
 				affinity[_pair_key(parts[0], parts[1])] = clampi(_int(aff[k], 0), 0, GameData.affinity_max(parts[0], parts[1]))
 
+	# 진영 옮긴 기록 (주군·앙숙 판정에 쓰여서 맨 먼저)
+	stories.clear()
+	for k in _arr(d.get("stories", [])):
+		if GameData.DOGS.has(str(k)):
+			stories[str(k)] = true
+	defected.clear()
+	for k in _arr(d.get("defected", [])):
+		if GameData.DEFECTORS.has(str(k)):
+			defected[str(k)] = true
+	# 클로버 화해 (앙숙 판정에 쓰여서 커플보다 먼저)
+	made_up.clear()
+	for k in _arr(d.get("made_up", [])):
+		var parts := str(k).split("|")
+		if parts.size() == 2 and GameData.DOGS.has(parts[0]) and GameData.DOGS.has(parts[1]) and parts[0] != parts[1]:
+			made_up[_pair_key(parts[0], parts[1])] = true
+	sulky.clear()
+	var sk = d.get("sulky", {})
+	if sk is Dictionary:
+		for k in sk:
+			var parts := str(k).split("|")
+			var who := str(sk[k])
+			if parts.size() == 2 and GameData.DOGS.has(parts[0]) and GameData.DOGS.has(parts[1]) and parts[0] != parts[1] and who in parts:
+				sulky[_pair_key(parts[0], parts[1])] = who
+	clover_gifts.clear()
+	var cg = d.get("clover_gifts", {})
+	if cg is Dictionary:
+		for k in cg:
+			var parts := str(k).split("|")
+			if parts.size() == 2 and GameData.DOGS.has(parts[0]) and GameData.DOGS.has(parts[1]) and parts[0] != parts[1]:
+				var n := clampi(_int(cg[k], 0), 0, GameData.MAKEUP_CLOVERS - 1)
+				if n > 0:
+					clover_gifts[_pair_key(parts[0], parts[1])] = n
+
 	couples.clear()
 	var cp = d.get("couples", {})
 	if cp is Dictionary:
@@ -413,7 +683,7 @@ func _apply(d: Dictionary) -> void:
 				var b := str(other)
 				if a == b or not GameData.DOGS.has(a) or not GameData.DOGS.has(b) or is_couple(a, b):
 					continue
-				if GameData.is_rival(a, b) or GameData.is_family(a, b) or not can_take_partner(a) or not can_take_partner(b):
+				if GameData.is_rival(a, b) or GameData.is_family(a, b) or is_sulky(a, b) or not can_take_partner(a) or not can_take_partner(b):
 					continue
 				for pair in [[a, b], [b, a]]:
 					var list: Array = couples.get(pair[0], [])
@@ -445,6 +715,31 @@ func _apply(d: Dictionary) -> void:
 					sworn[pair[0]] = list
 
 	luck = clampi(_int(d.get("luck"), 0), 0, 999)
+	mini_cleared = clampi(_int(d.get("mini_cleared"), 0), 0, GameData.MINI_STAGES.size())
+	merits = clampi(_int(d.get("merits"), 0), 0, 99999)
+	sp_paid.clear()
+	var spp = d.get("sp_paid", [])
+	if spp is Array:
+		for k in spp:
+			sp_paid[str(k)] = true
+	battle_tut_done = d.get("battle_tut_done", false) == true
+	pair_wins.clear()
+	var pw = d.get("pair_wins", {})
+	if pw is Dictionary:
+		for k in pw:
+			var parts := str(k).split("|")
+			if parts.size() == 2 and GameData.DOGS.has(parts[0]) and GameData.DOGS.has(parts[1]) and parts[0] != parts[1]:
+				var n := clampi(_int(pw[k], 0), 0, 99999)
+				if n > 0:
+					pair_wins[_pair_key(parts[0], parts[1])] = n
+	battle_exp.clear()
+	var be = d.get("battle_exp", {})
+	if be is Dictionary:
+		for k in be:
+			if GameData.DOGS.has(str(k)):
+				var e := clampi(_int(be[k], 0), 0, 999999)
+				if e > 0:
+					battle_exp[str(k)] = e
 	items.clear()
 	var it = d.get("items", {})
 	if it is Dictionary:
@@ -485,6 +780,17 @@ func reset_all() -> void:
 	sworn.clear()
 	items.clear()
 	luck = 0
+	sulky.clear()
+	clover_gifts.clear()
+	made_up.clear()
+	mini_cleared = 0
+	merits = 0
+	sp_paid.clear()
+	battle_exp.clear()
+	battle_tut_done = false
+	pair_wins.clear()
+	defected.clear()
+	stories.clear()
 	save_now()
 	# 백업에 예전 진행이 남아 있으면 나중에 복구될 수 있으니 같이 지움
 	var dir := DirAccess.open("user://")

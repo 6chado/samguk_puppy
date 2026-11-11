@@ -81,7 +81,7 @@ func _load_sprites() -> void:
 	_sprites.clear()
 	for form in 3:
 		for eyes in ["open", "closed", "half", "squint", "line"]:
-			var path := "%s%s_%d_%s.png" % [SPRITE_DIR, dog_id, form, eyes]
+			var path := "%s%s_%d_%s.png" % [SPRITE_DIR, GameData.sprite_id(dog_id, form), form, eyes]
 			if ResourceLoader.exists(path):
 				_sprites["%d_%s" % [form, eyes]] = load(path)
 
@@ -163,6 +163,8 @@ func pet() -> void:
 
 
 func _process(delta: float) -> void:
+	if not is_visible_in_tree():   # 안 보일 땐 매 프레임 다시 그리지 않음
+		return
 	_t += delta
 	_happy_time = maxf(_happy_time - delta, 0.0)
 	_eat_time = maxf(_eat_time - delta, 0.0)

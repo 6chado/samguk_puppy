@@ -47,7 +47,7 @@ func set_pets(list: Array) -> void:
 
 
 func _tex_for(dog_id: String, form: int, eyes: String) -> Texture2D:
-	var path := "%s%s_%d_%s.png" % [SPRITE_DIR, dog_id, form, eyes]
+	var path := "%s%s_%d_%s.png" % [SPRITE_DIR, GameData.sprite_id(dog_id, form), form, eyes]
 	if not _tex.has(path):
 		_tex[path] = load(path) if ResourceLoader.exists(path) else null
 	return _tex[path]
@@ -55,7 +55,7 @@ func _tex_for(dog_id: String, form: int, eyes: String) -> Texture2D:
 
 ## 그림에서 가장 위쪽(모자·귀 끝) 위치 비율 0~1
 func _top_frac(dog_id: String, form: int, eyes: String) -> float:
-	var path := "%s%s_%d_%s.png" % [SPRITE_DIR, dog_id, form, eyes]
+	var path := "%s%s_%d_%s.png" % [SPRITE_DIR, GameData.sprite_id(dog_id, form), form, eyes]
 	if not _top.has(path):
 		var f := 4.0 / 48.0
 		var tex := _tex_for(dog_id, form, eyes)

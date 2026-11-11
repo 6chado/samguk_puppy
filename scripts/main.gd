@@ -10,6 +10,7 @@ const BG_COLOR := Color(0.98, 0.95, 0.88)
 const TEXT_COLOR := Color(0.28, 0.22, 0.16)
 const SUB_COLOR := Color(0.52, 0.42, 0.34)
 const PINK := Color(0.94, 0.42, 0.56)
+const CLOVER_COL := Color(0.4, 0.68, 0.38)   # 클로버(화해) 버튼·꼬리표
 const SPRITE_DIR := "res://assets/dogs/"
 
 const ENEMIES: Array[String] = ["황건적 멍멍이", "산적 똥개", "남만 들개", "동탁군 불독", "원소군 진돗개"]
@@ -34,13 +35,15 @@ const FONT_SCALE := 1.2
 ## 버튼 누를 때 젤리 출렁임 세기 (1.0 = 처음 버전, 0.5 = 절반)
 const JELLY := 0.5
 const FACTION_COLORS := {"shu": Color(0.24, 0.6, 0.36), "wei": Color(0.26, 0.4, 0.72), "wu": Color(0.82, 0.28, 0.28),
-	"special": Color(0.52, 0.32, 0.7)}
+	"special": Color(0.52, 0.32, 0.7), "jin": Color(0.17, 0.5, 0.5),
+	"han": Color(0.87, 0.49, 0.17), "chu": Color(0.25, 0.23, 0.29)}
 
 var page: Control          # 홈 / 목록 / 도감 (매번 새로 만듦)
 var raise_screen: Control
 
 var title_label: Label
 var stage_label: Label
+var title_tag: HBoxContainer   # 키우기 화면 칭호 꼬리표 자리
 var exp_bar: ProgressBar
 var exp_label: Label
 var fatigue_bar: ProgressBar
@@ -56,6 +59,13 @@ var back_button: Button
 var overlay: Control
 var overlay_title: Label
 var overlay_image: TextureRect
+var _anger_mark: Control   # 창 그림 위 💢
+var overlay_image2: TextureRect   # 두 마리 같이 보여 줄 때 오른쪽 그림
+var overlay_image3: TextureRect
+var _anger_marks: Array = []
+var overlay_extra: VBoxContainer
+var overlay_stats: HBoxContainer   # 그림 밑 작은 상태 (대전 결과: 칭호·전공)
+var _tear_marks: Array = []       # 그림 위 ㅠㅠ 눈물
 var overlay_log: Label
 var strategy_box: HBoxContainer
 var drops_box: HBoxContainer
@@ -71,6 +81,12 @@ var relation_scroll: ScrollContainer   # 관계가 많으면 이 안에서 손�
 
 const TutorialScript := preload("res://scripts/tutorial_layer.gd")
 const PhotoStageScript := preload("res://scripts/photo_stage.gd")
+const RpsIconScript := preload("res://scripts/rps_icon.gd")
+const ShinyTagScript := preload("res://scripts/shiny_tag.gd")
+const EmperorTagScript := preload("res://scripts/emperor_tag.gd")
+const StoryData := preload("res://scripts/story_data.gd")
+const GradTagScript := preload("res://scripts/gradient_tag.gd")
+const FramePanelScript := preload("res://scripts/frame_panel.gd")
 var _photo_sel: Array[String] = []     # 고른 멍냥이 (고른 순서 = 왼쪽부터)
 var _photo_expr: Dictionary = {}      # dog_id -> 표정 이름
 var _photo_stage                       # 사진 무대
@@ -138,7 +154,11 @@ func _ready() -> void:
 	add_child(celebration)
 	tut = TutorialScript.new()
 	add_child(tut)
-	tut.tapped.connect(_tut_next)
+	tut.tapped.connect(func() -> void:
+		if _btut_step >= 0:
+			_btut_next()
+		else:
+			_tut_next())
 	_show_home()
 	if not GameState.tutorial_done:
 		_tut_start()
@@ -235,7 +255,7 @@ func _show_home() -> void:
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(30, 0)
 	ticket_row.add_child(spacer)
-	ticket_row.add_child(_label("도감 %d/%d" % [GameState.owned.size(), GameData.DOGS.size()], 28))
+	ticket_row.add_child(_label("도감 %d/%d" % [GameState.owned.size(), GameState.dex_total()], 28))
 
 	var id: String = GameState.current
 	var home_view := PuppyView.new()   # 홈에서도 쓰다듬으면 하트는 나옴 (수치는 안 바뀜)
@@ -246,10 +266,21 @@ func _show_home() -> void:
 	home_view.stage = GameState.stage_of(id)
 	v.add_child(_label("%s  ·  %s" % [GameData.DOGS[id]["name"], GameData.stage_name(GameState.stage_of(id), id)], 34))
 
-	var go := _button("키우러 가기", _show_roster)
-	go.custom_minimum_size = Vector2(0, 120)
-	go.add_theme_font_size_override("font_size", _fs(38))
-	v.add_child(go)
+	# 대전 (튜토리얼 보기 전엔 회색 잠김)
+	var mini := _button("대전", _show_mini)
+	_set_button_icon(mini, "icon_strategy")
+	mini.custom_minimum_size = Vector2(0, 100)
+	var navy := Color(0.36, 0.38, 0.6)
+	mini.add_theme_stylebox_override("normal", _box(navy, 18))
+	mini.add_theme_stylebox_override("hover", _box(navy.lightened(0.1), 18))
+	mini.add_theme_stylebox_override("pressed", _box(navy.darkened(0.15), 18))
+	mini.add_theme_stylebox_override("disabled", _box(Color(0.74, 0.72, 0.7), 18))
+	mini.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.9))
+	if not GameState.battle_tut_done:
+		mini.disabled = true
+		mini.text = "대전 · 무장과 책사를 어른으로 키우면 열려요"
+		mini.add_theme_font_size_override("font_size", _fs(22))
+	v.add_child(mini)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	v.add_child(row)
@@ -258,7 +289,7 @@ func _show_home() -> void:
 	_set_button_icon(gacha, "ticket")
 	gacha.custom_minimum_size = Vector2(0, 110)
 	gacha.size_flags_horizontal = SIZE_EXPAND_FILL
-	var pink := PINK
+	var pink := _gacha_color()
 	gacha.add_theme_stylebox_override("normal", _box(pink, 18))
 	gacha.add_theme_stylebox_override("hover", _box(pink.lightened(0.1), 18))
 	gacha.add_theme_stylebox_override("pressed", _box(pink.darkened(0.15), 18))
@@ -273,6 +304,26 @@ func _show_home() -> void:
 	cam.custom_minimum_size = Vector2(0, 110)
 	cam.size_flags_horizontal = SIZE_EXPAND_FILL
 	row.add_child(cam)
+	var story := _button("이야기", _show_sp_stories)
+	_set_button_icon(story, "item_scroll")
+	story.custom_minimum_size = Vector2(0, 110)
+	story.size_flags_horizontal = SIZE_EXPAND_FILL
+	var plum := Color(0.55, 0.45, 0.72)
+	story.add_theme_stylebox_override("normal", _box(plum, 18))
+	story.add_theme_stylebox_override("hover", _box(plum.lightened(0.1), 18))
+	story.add_theme_stylebox_override("pressed", _box(plum.darkened(0.15), 18))
+	row.add_child(story)
+	for b in [gacha, dex, cam, story]:   # 4개라 글씨·아이콘 조금 작게
+		b.add_theme_font_size_override("font_size", _fs(28))
+		b.add_theme_constant_override("icon_max_width", 48)
+		b.add_theme_constant_override("h_separation", 6)
+	var go := _button("키우러 가기", _show_roster)
+	go.custom_minimum_size = Vector2(0, 120)
+	go.add_theme_font_size_override("font_size", _fs(38))
+	v.add_child(go)
+	(func() -> void:
+		if not _story_check():
+			_btut_check()).call_deferred()
 
 
 ## 키우러 가기: 데리고 있는 멍냥이를 진영 탭별로
@@ -289,18 +340,25 @@ func _show_dex() -> void:
 func _faction_page(kind: String) -> void:
 	_log("%s 화면" % kind)
 	if _tab_faction == "":
-		_tab_faction = GameData.DOGS[GameState.current]["faction"]
+		_tab_faction = GameData.faction_of(GameState.current)
 	var v := _new_page()
-	var title := "키우러 가기" if kind == "roster" else "도감 %d / %d" % [GameState.owned.size(), GameData.DOGS.size()]
+	var title := "키우러 가기" if kind == "roster" else "도감 %d / %d" % [GameState.owned.size(), GameState.dex_total()]
 	_page_header(v, "← 홈", _show_home, title)
+	if kind == "dex":   # 칭호·스페셜 칭호·단체 칭호·이야기 모아 보기
+		var rec := _button("칭호 · 이야기 모아 보기", _show_records.bind("rank"))
+		_set_button_icon(rec, "item_scroll")
+		rec.custom_minimum_size = Vector2(0, 80)
+		rec.add_theme_font_size_override("font_size", _fs(26))
+		_yellow_outline(rec)
+		v.add_child(rec)
 
 	var tabs := HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", 10)
 	v.add_child(tabs)
-	for fid in GameData.FACTION_ORDER:
+	for fid in GameData.faction_order():
 		var total := 0
 		for id in GameData.DOGS:
-			if GameData.DOGS[id]["faction"] == fid:
+			if GameData.faction_of(id) == fid and GameData.available(id):
 				total += 1
 		var have: int = GameState.owned_in(fid).size()
 		var label := "%s\n%d" % [GameData.FACTIONS[fid]["name"], have] if kind == "roster" \
@@ -329,22 +387,22 @@ func _faction_page(kind: String) -> void:
 	var lord: String = GameData.FACTIONS[cur]["lord"]
 	var others: Array[String] = []
 	for id in GameData.DOGS:
-		if GameData.DOGS[id]["faction"] == cur and id != lord:
+		if GameData.faction_of(id) == cur and id != lord and GameData.available(id):
 			if kind == "dex" or GameState.owns(id):
 				others.append(id)
 
-	# 맨 윗줄: 주군 한 마리 가운데 (금색 테두리)
-	var top := CenterContainer.new()
-	list.add_child(top)
+	# 맨 윗줄: 주군 한 마리 가운데 (금색 테두리). 아래 칸들과 크기가 똑같도록 같은 3칸 격자에 [빈칸, 주군, 빈칸]
 	if lord != "" and (GameState.owns(lord) or kind == "dex"):
+		var top := _grid(list)
 		var card := _page_card(kind, lord)
-		card.custom_minimum_size.x = 214
 		if GameState.owns(lord):
 			var gold := Color(0.95, 0.74, 0.22)
-			card.add_theme_stylebox_override("normal", _card_box(Color(1.0, 0.97, 0.86), gold, 7))
-			card.add_theme_stylebox_override("hover", _card_box(Color(1.0, 0.95, 0.8), gold, 7))
-			card.add_theme_stylebox_override("pressed", _card_box(Color(0.98, 0.9, 0.72), gold, 7))
-		top.add_child(card)
+			card.add_theme_stylebox_override("normal", _card_box(Color(1.0, 0.97, 0.86), gold, 4))
+			card.add_theme_stylebox_override("hover", _card_box(Color(1.0, 0.95, 0.8), gold, 4))
+			card.add_theme_stylebox_override("pressed", _card_box(Color(0.98, 0.9, 0.72), gold, 4))
+		for c in [Control.new(), card, Control.new()]:
+			(c as Control).size_flags_horizontal = SIZE_EXPAND_FILL
+			top.add_child(c)
 
 	if others.is_empty():
 		var none := _label("아직 없어요. 뽑기로 데려와요!", 26)
@@ -400,17 +458,184 @@ func _show_growth(dog_id: String) -> void:
 			q.add_theme_color_override("font_color", Color(0.65, 0.6, 0.55))
 			cell.add_child(q)
 	drops_box.show()
+	# 성장 과정 밑에: 칭호 + 전공 현황
+	overlay_extra.add_child(_rank_panel(dog_id, true))
+	# 이 멍냥이 이야기가 있고 이미 봤으면: 다시 보기 버튼 (칭호 아래, 닫기 위)
+	if STORY_IDS.has(dog_id) and _story_seen(dog_id):
+		var sp: String = GameData.species(dog_id)
+		var rb := _button("%s %s 이야기 다시 보기" % [dog["name"], sp], _replay_story.bind(dog_id))
+		rb.custom_minimum_size = Vector2(0, 76)
+		rb.add_theme_font_size_override("font_size", _fs(24))
+		var col := Color(0.55, 0.45, 0.72)
+		rb.add_theme_stylebox_override("normal", _box(col, 18))
+		rb.add_theme_stylebox_override("hover", _box(col.lightened(0.1), 18))
+		rb.add_theme_stylebox_override("pressed", _box(col.darkened(0.15), 18))
+		overlay_extra.add_child(rb)
+	overlay_extra.show()
 	confirm_button.text = "닫기"
 	confirm_button.show()
+
+
+## 칭호 꼬리표 (없으면 null). 단계별 색, 황제는 각자 이름의 왕관 꼬리표
+func _rank_tag(id: String, px: int, lv := -1) -> Control:
+	if lv < 0:
+		lv = GameState.rank_of(id)
+	if lv <= 0:
+		return null
+	if GameData.is_emperor_lv(id, lv):   # 황제: 각자 이름 + 금·빨강·검정 꼬리표
+		var e = EmperorTagScript.new()
+		e.setup(GameData.rank_name(id, lv), GameData.emperor_theme(id), _fs(px))
+		return e
+	var t = ShinyTagScript.new()
+	t.setup(GameData.rank_name(id, lv), GameData.rank_color(lv), "plain", _fs(px))
+	return t
+
+
+## 스페셜 칭호 꼬리표 (반짝이는 무지갯빛 테두리)
+func _special_tag(text: String, px: int) -> Control:
+	var cols := _special_colors(text)
+	var t = GradTagScript.new()
+	t.setup(text, cols[0], cols[1], _fs(px))
+	return t
+
+
+## 스페셜 칭호 그라데이션 색: 같은 진영이면 진한색 → 연한색 (촉: 초록 → 연두), 다르면 진영 색 → 진영 색
+func _special_colors(title: String) -> Array:
+	for sp in GameData.SPECIAL_TITLES:
+		if sp["name"] == title:
+			var fa: String = GameData.faction_of(sp["a"])
+			var fb: String = GameData.faction_of(sp["b"])
+			var ca: Color = FACTION_COLORS.get(fa, Color(0.86, 0.6, 0.2))
+			var cb: Color = FACTION_COLORS.get(fb, Color(0.86, 0.6, 0.2))
+			if fa == fb:
+				return [ca.darkened(0.08), ca.lightened(0.45)]
+			return [ca, cb]
+	return [Color(0.86, 0.6, 0.2), Color(0.98, 0.82, 0.4)]
+
+
+## 단체 칭호 꼬리표 (하늘색 바탕 + 반짝이는 테두리)
+func _group_tag(text: String, px: int) -> Control:
+	var cols := _group_colors(text)
+	var t = GradTagScript.new()
+	t.setup(text, cols[0], cols[1], _fs(px))
+	return t
+
+
+## 단체 칭호 그라데이션 색: 멤버 진영이 다 같으면 진한색 → 연한색, 섞였으면 첫 진영 색 → 다른 진영 색
+func _group_colors(title: String) -> Array:
+	for g in GameData.GROUP_TITLES:
+		if g["name"] == title:
+			var facs: Array[String] = []
+			for m in g["members"]:
+				var f: String = GameData.faction_of(m)
+				if not facs.has(f):
+					facs.append(f)
+			var ca: Color = FACTION_COLORS.get(facs[0], Color(0.3, 0.55, 0.85))
+			if facs.size() == 1:
+				return [ca.darkened(0.08), ca.lightened(0.45)]
+			return [ca, FACTION_COLORS.get(facs[-1], Color(0.55, 0.82, 0.98))]
+	return [Color(0.3, 0.55, 0.85), Color(0.55, 0.82, 0.98)]
+
+
+## 전공 막대 바탕: 지금 칭호 색을 연하게 (막 칭호가 올라 0칸이어도 동·은·금 색이 보이게)
+func _bar_bg(col: Color, lv: int) -> Color:
+	return Color(0.88, 0.84, 0.78) if lv <= 0 else col.lerp(Color(0.97, 0.94, 0.88), 0.62)
+
+
+## 칭호 + 전공 막대. full = 도감용 (아래에 스페셜 칭호도)
+func _rank_panel(id: String, full: bool) -> Control:
+	var rp: Dictionary = GameState.rank_progress(id)
+	var lv := int(rp["lv"])
+	var col: Color = GameData.rank_bar_color(id, lv)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 9 if not full else 12)
+	box.mouse_filter = MOUSE_FILTER_IGNORE
+	var head := HBoxContainer.new()
+	head.alignment = BoxContainer.ALIGNMENT_CENTER
+	head.add_theme_constant_override("separation", 8)
+	head.mouse_filter = MOUSE_FILTER_IGNORE
+	if full:
+		head.add_child(_label("칭호", 26))
+	var rt := _rank_tag(id, 24 if full else 16)
+	if rt:
+		head.add_child(rt)
+	else:
+		var none := _label("아직 없어요" if full else "칭호 없음", 24 if full else 15)
+		none.add_theme_color_override("font_color", SUB_COLOR)
+		none.mouse_filter = MOUSE_FILTER_IGNORE
+		head.add_child(none)
+	box.add_child(head)
+	# 전공 막대: 지금 칭호 → 다음 칭호
+	var bar := ProgressBar.new()
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(0, 20 if full else 10)
+	bar.mouse_filter = MOUSE_FILTER_IGNORE
+	bar.add_theme_stylebox_override("background", _box(_bar_bg(col, lv), 6))
+	bar.add_theme_stylebox_override("fill", _box(col.darkened(0.05), 6))
+	var num: Label
+	if int(rp["next"]) < 0:
+		bar.max_value = 1
+		bar.value = 1
+		num = _label("최고 칭호! (전공 %d)" % rp["exp"], 22 if full else 14)
+	else:
+		bar.max_value = int(rp["next"]) - int(rp["prev"])
+		bar.value = int(rp["exp"]) - int(rp["prev"])
+		num = _label(("다음 칭호까지 %d / %d" if full else "%d / %d") % [int(rp["exp"]) - int(rp["prev"]), int(rp["next"]) - int(rp["prev"])], 22 if full else 14)
+	num.add_theme_color_override("font_color", SUB_COLOR)
+	num.mouse_filter = MOUSE_FILTER_IGNORE
+	var pad := MarginContainer.new()
+	pad.mouse_filter = MOUSE_FILTER_IGNORE
+	pad.add_theme_constant_override("margin_left", 14 if not full else 40)
+	pad.add_theme_constant_override("margin_right", 14 if not full else 40)
+	pad.add_child(bar)
+	box.add_child(pad)
+	box.add_child(num)
+	# 스페셜 칭호 (도감)
+	if full:
+		var sp_head := _label("스페셜 칭호", 24)
+		box.add_child(sp_head)
+		var specials: Array = GameState.specials_of(id)
+		if specials.is_empty():
+			var hint := _label("특별한 짝꿍과 함께 대전에서 이기면 받을 수 있어요", 18)
+			hint.add_theme_color_override("font_color", SUB_COLOR)
+			box.add_child(hint)
+		else:
+			var flow := HFlowContainer.new()
+			flow.alignment = FlowContainer.ALIGNMENT_CENTER
+			flow.add_theme_constant_override("h_separation", 8)
+			flow.add_theme_constant_override("v_separation", 8)
+			for name_ in specials:
+				flow.add_child(_special_tag(name_, 22))
+			box.add_child(flow)
+		# 단체 칭호 (속한 게 있을 때만): 받았으면 반짝 태그, 아니면 몇 명 채웠는지
+		var groups: Array = GameData.groups_of(id)
+		if not groups.is_empty():
+			box.add_child(_label("단체 칭호", 24))
+			var gflow := HFlowContainer.new()
+			gflow.alignment = FlowContainer.ALIGNMENT_CENTER
+			gflow.add_theme_constant_override("h_separation", 10)
+			gflow.add_theme_constant_override("v_separation", 8)
+			for g in groups:
+				if GameState.group_done(g):
+					gflow.add_child(_group_tag(g["name"], 22))
+				else:
+					var gl := _label("%s %d/%d" % [g["name"], GameState.group_count(g), (g["members"] as Array).size()], 20)
+					gl.add_theme_color_override("font_color", SUB_COLOR)
+					gflow.add_child(gl)
+			box.add_child(gflow)
+			var gh := _label("멤버 모두 칭호 3단계(교위·참군) 이상이면 받아요", 16)
+			gh.add_theme_color_override("font_color", SUB_COLOR)
+			box.add_child(gh)
+	return box
 
 
 ## 그림 + 글씨 카드 버튼 (연한 바탕 + 주황 테두리, 글씨는 진하게)
 func _dog_card(dog_id: String, form: int, text: String, cb: Callable) -> Button:
 	var b := _button(text, cb)
-	b.icon = _dog_tex(dog_id, form)
+	b.icon = _centered_tex(_dog_tex(dog_id, form))
 	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
-	b.add_theme_constant_override("icon_max_width", 140)
+	b.add_theme_constant_override("icon_max_width", 128)   # 잘라낸 그림이라 폭 128 = 높이 약 140 (예전과 같음)
 	b.custom_minimum_size = Vector2(0, 230)
 	b.size_flags_horizontal = SIZE_EXPAND_FILL
 	b.add_theme_font_size_override("font_size", _fs(26))
@@ -431,10 +656,26 @@ func _card_box(bg: Color, border: Color, width: int) -> StyleBoxFlat:
 	return sb
 
 
+## 카드용: 그림의 몸 중심(가로 22/48)이 가운데 오도록 오른쪽 빈 곳을 잘라낸 그림 (꼬리 때문에 왼쪽으로 쏠려 보이는 것 보정)
+func _centered_tex(tex: Texture2D) -> Texture2D:
+	if tex == null:
+		return null
+	var key := "centered:%s" % tex.resource_path
+	if not _tex_cache.has(key):
+		var at := AtlasTexture.new()
+		at.atlas = tex
+		var sz := tex.get_size()
+		at.region = Rect2(0, 0, sz.x * 44.0 / 48.0, sz.y)
+		_tex_cache[key] = at
+	return _tex_cache[key]
+
+
 ## 멍냥이 그림 (form 0 새끼 / 1 청년 / 2 어른)
-func _dog_tex(dog_id: String, form: int) -> Texture2D:
-	var path := "%s%s_%d_open.png" % [SPRITE_DIR, dog_id, form]
+func _dog_tex(dog_id: String, form: int, eyes := "open") -> Texture2D:
+	var path := "%s%s_%d_%s.png" % [SPRITE_DIR, GameData.sprite_id(dog_id, form), form, eyes]
 	if not _tex_cache.has(path):
+		if _tex_cache.size() > 240:   # 그림을 너무 많이 쥐고 있으면 메모리가 커짐 → 비우고 다시
+			_tex_cache.clear()
 		_tex_cache[path] = load(path) if ResourceLoader.exists(path) else null
 	return _tex_cache[path]
 
@@ -508,7 +749,7 @@ func _tut_event(what: String) -> void:
 
 ## 초기화 경고창
 func _ask_reset() -> void:
-	_open_overlay("초기화", "모든 멍냥이 도감이 초기화됩니다.\n초기화 하시겠습니까?", "reset_confirm")
+	_open_overlay("초기화", "모든 멍냥이·아이템·칭호가 사라지고\n최신 버전으로 처음 튜토리얼부터 다시 시작해요.\n초기화 하시겠습니까?", "reset_confirm")
 	var red := Color(0.86, 0.32, 0.32)
 	confirm_button.text = "초기화"
 	confirm_button.add_theme_stylebox_override("normal", _box(red, 18))
@@ -528,6 +769,15 @@ func _do_reset() -> void:
 	busy = false
 	_pending_gift = {}
 	_tab_faction = ""
+	# 웹: 깃허브에 올라간 최신 버전 파일을 새로 받아서 다시 시작 (브라우저에 남은 옛날 파일 무시)
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("""
+			setTimeout(() => Promise.all(['index.html', 'index.js', 'index.pck', 'index.wasm'].map(
+				f => fetch(f, {cache: 'reload'}).catch(() => null)
+			)).finally(() => location.reload()), 1500);
+		""", true)
+		_open_overlay("초기화 중..", "최신 버전을 받아오고 있어요.\n잠시만 기다려 주세요!", "notice")
+		return
 	_show_home()
 	_tut_start()
 
@@ -615,7 +865,7 @@ func _show_photo() -> void:
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 8)
 	scroll.add_child(grid)
-	for fid in GameData.FACTION_ORDER:
+	for fid in GameData.faction_order():
 		for id in GameState.owned_in(fid):
 			var card := _dog_card(id, PuppyView.STAGE_FORM[GameState.stage_of(id)], GameData.DOGS[id]["name"], _on_photo_pick.bind(id))
 			card.custom_minimum_size = Vector2(0, 150)
@@ -817,6 +1067,24 @@ var _gacha_machine: Control
 var _gacha_lever: TextureRect
 
 
+## 뽑기 기계 색: 처음 = 빨강·분홍 / 진 열림 = 청록 / 초한 열림 = 주황·금색
+func _gacha_theme() -> String:
+	if GameData.chohan_open():
+		return "_chohan"
+	if GameData.jin_open():
+		return "_jin"
+	return ""
+
+
+func _gacha_color() -> Color:
+	match _gacha_theme():
+		"_chohan":
+			return Color(0.9, 0.58, 0.18)
+		"_jin":
+			return Color(0.2, 0.6, 0.57)
+	return PINK
+
+
 func _show_gacha() -> void:
 	_log("뽑기 화면")
 	_gacha_busy = false
@@ -851,7 +1119,7 @@ func _show_gacha() -> void:
 	_gacha_machine = machine
 	for tex_name in ["gacha_machine", "gacha_lever"]:
 		var t := TextureRect.new()
-		t.texture = FoodIcon.item_texture(tex_name)
+		t.texture = FoodIcon.item_texture(tex_name + _gacha_theme())
 		t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		t.stretch_mode = TextureRect.STRETCH_SCALE
 		t.size = machine.custom_minimum_size
@@ -905,7 +1173,7 @@ func _on_gacha() -> void:
 	var id: String = GameState.draw_gacha()
 	_log("뽑기: " + id)
 	_open_overlay("두근두근...", "", "gacha")
-	overlay_image.texture = FoodIcon.item_texture("capsule")
+	overlay_image.texture = FoodIcon.item_texture("capsule" + _gacha_theme())
 	overlay_image.show()
 	overlay_image.pivot_offset = overlay_image.custom_minimum_size / 2
 	var wobble := overlay_image.create_tween().set_loops()
@@ -922,7 +1190,7 @@ func _on_gacha() -> void:
 	overlay_image.scale = Vector2(0.2, 0.2)
 	overlay_image.create_tween().tween_property(overlay_image, "scale", Vector2.ONE, 0.25) \
 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	overlay_log.text = "%s 진영 · %s" % [GameData.FACTIONS[dog["faction"]]["name"],
+	overlay_log.text = "%s 진영 · %s" % [GameData.FACTIONS[GameData.faction_of(id)]["name"],
 		"책사" if GameData.is_strategist(id) else ("군주" if GameData.is_lord(id) else "무장")]
 	celebration.play("", "", overlay_image.global_position + overlay_image.size / 2 - celebration.global_position)
 	confirm_button.text = "반가워!"
@@ -951,8 +1219,15 @@ func _build_raise_screen() -> void:
 	spacer.custom_minimum_size = Vector2(150, 0)
 	header.add_child(spacer)
 
+	var stage_row := HBoxContainer.new()
+	stage_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	stage_row.add_theme_constant_override("separation", 10)
+	v.add_child(stage_row)
 	stage_label = _label("", 30)
-	v.add_child(stage_label)
+	stage_row.add_child(stage_label)
+	title_tag = HBoxContainer.new()   # 대전 칭호 (회색→동→은→금→다이아→무지개)
+	title_tag.size_flags_vertical = SIZE_SHRINK_CENTER
+	stage_row.add_child(title_tag)
 	exp_bar = ProgressBar.new()
 	exp_bar.show_percentage = false
 	exp_bar.custom_minimum_size = Vector2(0, 26)
@@ -1088,6 +1363,11 @@ func _show_raise(dog_id: String) -> void:
 
 	var dog: Dictionary = GameData.DOGS[dog_id]
 	title_label.text = dog["name"]
+	for c in title_tag.get_children():
+		c.queue_free()
+	var rt := _rank_tag(dog_id, 22)
+	if rt:
+		title_tag.add_child(rt)
 	_set_button_icon(battle_button, "icon_strategy" if GameData.is_strategist(dog_id) else "icon_battle")
 	puppy_view.body_color = dog["color"]
 	puppy_view.dog_id = dog_id  # 그림 있으면 그림으로
@@ -1246,6 +1526,8 @@ func _on_petted() -> void:
 			_show_msg(PET_MESSAGES.pick_random())
 	_refresh()
 	GameState.save_game()
+	if puppy.dog_id == "sima_yi":
+		_story_check()   # 사마의 친밀도 50 → 진 이야기
 
 
 # ── 행동 후 공통: 저장 → 어른 선물 창 ──
@@ -1264,6 +1546,8 @@ func _after_action() -> void:
 		confirm_button.text = "고마워!"
 		confirm_button.show()
 		_set_busy(true)
+	elif puppy and puppy.dog_id == "sima_yi":
+		_story_check()   # 사마의 친밀도 50 → 진 이야기
 
 
 # ── 행동: 잠자기 → 피로도 리셋 ──
@@ -1514,6 +1798,15 @@ func _use_item(item_id: String) -> void:
 				puppy.add_exp(GameData.PEACH_EXP)
 				if puppy.stage == before:
 					_show_msg("천도복숭아 냠냠! +%d exp" % GameData.PEACH_EXP)
+		"golden_peach":
+			if puppy.is_adult():
+				puppy.affection += GameData.GOLDEN_PEACH_EXP
+				_show_msg("황금복숭아 냠냠! 친밀도 +%d" % GameData.GOLDEN_PEACH_EXP)
+			else:
+				var before2 := puppy.stage
+				puppy.add_exp(GameData.GOLDEN_PEACH_EXP)
+				if puppy.stage == before2:
+					_show_msg("황금복숭아 냠냠! +%d exp" % GameData.GOLDEN_PEACH_EXP)
 		"clover":
 			GameState.luck += GameData.CLOVER_BATTLES
 			_show_msg("뭔가 좋은 일이 일어날 것 같아!")
@@ -1535,7 +1828,21 @@ func _use_item(item_id: String) -> void:
 const BOND_ORDER: Array[String] = ["peach", "heart", "trust", "family", "skull"]
 
 
+var _rel_sig := ""   # 옆 관계 목록이 바뀌었는지 (같으면 다시 안 만듦 → 렉 줄이기)
+
+
 func _update_relations() -> void:
+	var sig := ""
+	if puppy != null:
+		sig = puppy.dog_id
+		for other in GameState.owned:
+			if other != puppy.dog_id:
+				var k := _bond_kinds(puppy.dog_id, other)
+				if not k.is_empty():
+					sig += "|%s:%s" % [other, ",".join(PackedStringArray(k))]
+	if sig == _rel_sig and relation_box.get_child_count() > 0:
+		return
+	_rel_sig = sig
 	for c in relation_box.get_children():
 		relation_box.remove_child(c)
 		c.queue_free()
@@ -1641,8 +1948,14 @@ func _open_relations() -> void:
 	rel_overlay.show()
 
 
+var _rel_gen := 0   # 관계도 목록을 새로 만들 때마다 +1 (나눠 만들던 이전 작업 멈춤)
+
+
 func _fill_relations() -> void:
+	_rel_gen += 1
+	_rel_sig = ""   # 관계가 바뀌었을 수 있으니 옆 목록도 다음에 다시
 	for c in rel_list.get_children():
+		rel_list.remove_child(c)
 		c.queue_free()
 	var me := puppy.dog_id
 	var others: Array[String] = []
@@ -1657,12 +1970,38 @@ func _fill_relations() -> void:
 	# 커플·의형제 → 친한 순 → 앙숙은 맨 아래
 	others.sort_custom(func(a: String, b: String) -> bool:
 		return _rel_rank(me, a) > _rel_rank(me, b))
-	for other in others:
-		rel_list.add_child(_relation_card(me, other))
+	# 한 번에 다 만들면 멈칫 → 처음 8장만 바로, 나머지는 한 프레임에 6장씩
+	var gen := _rel_gen
+	for i in others.size():
+		if i >= 8 and i % 6 == 2:
+			await get_tree().process_frame
+			if gen != _rel_gen or puppy == null or puppy.dog_id != me:
+				return
+		var card := _relation_card(me, others[i])
+		card.set_meta("other", others[i])
+		rel_list.add_child(card)
+
+
+## 카드 하나만 새로 (놀기·선물 뒤에 목록 전체를 다시 만들지 않게). 순서는 그대로
+func _refresh_rel_card(other: String) -> void:
+	if puppy == null:
+		return
+	_rel_sig = ""
+	for c in rel_list.get_children():
+		if c.has_meta("other") and str(c.get_meta("other")) == other:
+			var i: int = c.get_index()
+			var card := _relation_card(puppy.dog_id, other)
+			card.set_meta("other", other)
+			rel_list.add_child(card)
+			rel_list.move_child(card, i)
+			rel_list.remove_child(c)
+			c.queue_free()
+			return
+	_fill_relations()
 
 
 func _rel_rank(me: String, other: String) -> int:
-	if GameData.is_rival(me, other):
+	if GameData.is_rival(me, other) or GameState.is_sulky(me, other):
 		return -1
 	var r: int = GameState.affinity_of(me, other) + GameState.gift_count(me, other)
 	if GameState.is_couple(me, other):
@@ -1677,7 +2016,17 @@ func _meter(kind: String, filled: int, total: int) -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 2)
 	for i in total:
-		if kind == "peach":
+		if kind == "clover":
+			var c := TextureRect.new()
+			c.texture = FoodIcon.item_texture("item_clover")
+			c.custom_minimum_size = Vector2(32, 32)
+			c.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			c.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			c.mouse_filter = MOUSE_FILTER_IGNORE
+			if i >= filled:
+				c.modulate = Color(0.55, 0.55, 0.55, 0.35)
+			row.add_child(c)
+		elif kind == "peach":
 			var t := _bond_icon("peach", 32) as TextureRect
 			if i >= filled:
 				t.modulate = Color(0.55, 0.55, 0.55, 0.35)   # 빈 칸
@@ -1692,7 +2041,9 @@ func _relation_card(me: String, other: String) -> Control:
 	var row := _card_row()
 	var h: HBoxContainer = row.get_child(0)
 	var face := TextureRect.new()
-	face.texture = _dog_tex(other, PuppyView.STAGE_FORM[GameState.stage_of(other)])
+	var sulking: bool = GameState.is_sulky(me, other)
+	face.texture = _dog_tex(other, PuppyView.STAGE_FORM[GameState.stage_of(other)],
+		"line" if sulking and GameState.sulker(me, other) == other else "open")   # 토라진 애는 찡그린 얼굴
 	face.custom_minimum_size = Vector2(92, 92)
 	face.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	face.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -1722,7 +2073,9 @@ func _relation_card(me: String, other: String) -> Control:
 		name_row.add_child(_tag("가족", Color(0.78, 0.56, 0.3)))
 	if GameData.is_rival(me, other):
 		name_row.add_child(_tag("앙숙", Color(0.56, 0.54, 0.53)))
-	var sub := _label("%s 진영 · %s" % [GameData.FACTIONS[dog["faction"]]["name"], GameData.stage_name(GameState.stage_of(other), other)], 18)
+	if sulking:
+		name_row.add_child(_tag("토라짐", CLOVER_COL))
+	var sub := _label("%s 진영 · %s" % [GameData.FACTIONS[GameData.faction_of(other)]["name"], GameData.stage_name(GameState.stage_of(other), other)], 18)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	sub.add_theme_color_override("font_color", SUB_COLOR)
 	info.add_child(sub)
@@ -1745,6 +2098,26 @@ func _relation_card(me: String, other: String) -> Control:
 		l.add_theme_color_override("font_color", SUB_COLOR)
 		rival_row.add_child(l)
 		info.add_child(rival_row)
+		# 둘 다 어른이면 클로버 3개로 화해할 수 있음
+		if GameState.get_puppy(me).is_adult() and GameState.get_puppy(other).is_adult():
+			info.add_child(_meter("clover", GameState.clover_count(me, other), GameData.MAKEUP_CLOVERS))
+			actions.add_child(_clover_button(me, other))
+		else:
+			var hint := _label("둘 다 어른이 되면 클로버로 화해할 수 있어요", 16)
+			hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+			hint.add_theme_color_override("font_color", SUB_COLOR)
+			info.add_child(hint)
+		return row
+
+	# 토라진 사이: 놀기·선물 대신 클로버로 달래기
+	if sulking:
+		var who: String = GameState.sulker(me, other)
+		var l := _label("%s %s%s 토라졌어요.." % [GameData.DOGS[who]["name"], GameData.species(who), "가"], 20)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		l.add_theme_color_override("font_color", SUB_COLOR)
+		info.add_child(l)
+		info.add_child(_meter("clover", GameState.clover_count(me, other), GameData.MAKEUP_CLOVERS))
+		actions.add_child(_clover_button(me, other))
 		return row
 
 	# 하트 줄: 놀기 → 고백
@@ -1760,16 +2133,23 @@ func _relation_card(me: String, other: String) -> Control:
 		if GameState.affinity_of(me, other) < aff_max:
 			actions.add_child(_small_button("놀기", _on_play.bind(other), "", Color()))
 		else:
-			actions.add_child(_small_button("고백하기", _on_confess.bind(other), _confess_block_reason(me, other), PINK,
-				"성공 %d%%" % roundi(GameData.confess_chance(me, other) * 100)))
+			actions.add_child(_small_button("고백하기", _on_confess.bind(other), _confess_block_reason(me, other), PINK))
 	if not bonded:
 		if GameState.gift_count(me, other) < gift_max:
-			var no_peach := "복숭아가 없어요" if GameState.item_count("peach") <= 0 else ""
+			var no_peach := "복숭아가 없어요" if GameState.peach_total() <= 0 else ""
 			actions.add_child(_small_button("선물하기", _on_gift.bind(other), no_peach, Color(0.95, 0.6, 0.62)))
 		else:
-			actions.add_child(_small_button("의형제 맺기", _on_swear.bind(other), _swear_block_reason(me, other), Color(0.92, 0.5, 0.6),
-				"성공 %d%%" % roundi(GameData.swear_chance(me, other) * 100)))
+			actions.add_child(_small_button("의형제 맺기", _on_swear.bind(other), _swear_block_reason(me, other), Color(0.92, 0.5, 0.6)))
+	if couple:
+		actions.add_child(_small_button("헤어지기", _on_breakup.bind(other), "", Color(0.6, 0.58, 0.62)))
 	return row
+
+
+## 초록 클로버 선물 버튼 (토라진 애 달래기 / 앙숙 화해)
+func _clover_button(me: String, other: String) -> Control:
+	var no_clover := "클로버가 없어요" if GameState.item_count("clover") <= 0 else ""
+	return _small_button("클로버 선물", _on_clover.bind(other), no_clover, CLOVER_COL,
+		"화해까지 %d/%d" % [GameState.clover_count(me, other), GameData.MAKEUP_CLOVERS])
 
 
 ## 이름 옆 작은 색 꼬리표 (신뢰 / 가족)
@@ -1808,6 +2188,8 @@ func _small_button(text: String, cb: Callable, block: String, col: Color, note :
 
 ## 고백 못 하는 이유 (할 수 있으면 "")
 func _confess_block_reason(me: String, other: String) -> String:
+	if GameData.is_lord(me) and GameData.is_lord(other):
+		return "주군끼리는 고백 안 돼요"
 	if GameData.is_family(me, other):
 		return "가족이라 고백은 안 돼요"
 	if not GameState.get_puppy(me).is_adult() or not GameState.get_puppy(other).is_adult():
@@ -1840,7 +2222,9 @@ func _on_play(other: String) -> void:
 	else:
 		rel_msg.text = "%s%s %s 아직 어색한가 봐요...\n(다른 진영이라 친해지기 어려워요)" % [me_name, _rang(me_name), other_name]
 	_log("놀기: %s - %s (%s)" % [me, other, gained])
-	_fill_relations()
+	_refresh_rel_card(other)
+	if gained:
+		_story_check()
 
 
 func _on_gift(other: String) -> void:
@@ -1850,10 +2234,947 @@ func _on_gift(other: String) -> void:
 	var me_name: String = GameData.DOGS[me]["name"]
 	var other_name: String = GameData.DOGS[other]["name"]
 	var n: int = GameState.gift_count(me, other)
-	rel_msg.text = "%s%s %s에게 천도복숭아를 선물했어요! (%d/%d)%s" % [me_name, _ig(me_name), other_name, n, GameData.gift_max(me, other),
+	rel_msg.text = "%s%s %s에게 %s를 선물했어요! (%d/%d)%s" % [me_name, _ig(me_name), other_name, GameData.ITEMS[GameState.last_gift]["name"], n, GameData.gift_max(me, other),
 		"\n의형제를 맺을 수 있어요!" if n >= GameData.gift_max(me, other) else ""]
 	_log("선물: %s -> %s (%d)" % [me, other, n])
+	if GameState.peach_total() <= 0:
+		_fill_relations()   # 복숭아가 다 떨어지면 다른 카드 버튼도 바뀜
+	else:
+		_refresh_rel_card(other)
+
+
+## 창 가운데 그림을 그 멍냥이 얼굴로 (eyes: open / squint / line / closed / half)
+func _overlay_face(dog_id: String, eyes: String, angry := false) -> void:
+	overlay_image.texture = _centered_tex(_dog_tex(dog_id, PuppyView.STAGE_FORM[GameState.stage_of(dog_id)], eyes))
+	overlay_image.show()
+	_anger_mark.visible = angry
+	_anger_mark.queue_redraw()
+
+
+## 두 마리 같이 (sad = 감은 눈 + 눈물 ㅠㅠ)
+func _overlay_pair(a: String, b: String, eyes: String, sad := false) -> void:
+	_overlay_face(a, eyes)
+	overlay_image2.texture = _centered_tex(_dog_tex(b, PuppyView.STAGE_FORM[GameState.stage_of(b)], eyes))
+	overlay_image2.show()
+	for t in _tear_marks:
+		t.visible = sad
+		t.queue_redraw()
+
+
+## ── 반짝반짝 빛 (이야기 속 아이템) ──
+var _glow: Control
+var _glow_a := 0.0
+var _glow_tw: Tween
+
+
+func _start_glow() -> void:
+	_stop_glow()
+	_glow.show()
+	overlay_image.pivot_offset = overlay_image.custom_minimum_size / 2
+	_glow_tw = create_tween().set_loops()
+	_glow_tw.set_parallel(true)
+	_glow_tw.tween_method(func(a: float) -> void:
+		_glow_a = a
+		_glow.queue_redraw(), 0.0, TAU / 6.0, 1.6)
+	_glow_tw.tween_property(overlay_image, "scale", Vector2(1.06, 1.06), 0.8).set_trans(Tween.TRANS_SINE)
+	_glow_tw.tween_property(overlay_image, "modulate", Color(1.25, 1.2, 1.0), 0.8).set_trans(Tween.TRANS_SINE)
+	_glow_tw.chain().tween_property(overlay_image, "scale", Vector2.ONE, 0.8).set_trans(Tween.TRANS_SINE)
+	_glow_tw.parallel().tween_property(overlay_image, "modulate", Color.WHITE, 0.8).set_trans(Tween.TRANS_SINE)
+
+
+func _stop_glow() -> void:
+	if _glow_tw:
+		_glow_tw.kill()
+		_glow_tw = null
+	if _glow:
+		_glow.hide()
+	if overlay_image:
+		overlay_image.modulate = Color.WHITE
+
+
+func _draw_glow() -> void:
+	var c := _glow.size / 2
+	var r := minf(_glow.size.x, _glow.size.y)
+	for k in 3:   # 부드러운 둥근 빛
+		_glow.draw_circle(c, r * (0.5 - k * 0.1), Color(1.0, 0.92, 0.5, 0.16))
+	for i in 12:  # 빙글빙글 도는 빛줄기
+		var a := _glow_a + i * TAU / 12
+		var w := 0.09
+		var tip := r * (0.78 if i % 2 == 0 else 0.62)
+		var pts := PackedVector2Array([c, c + Vector2.from_angle(a - w) * tip, c + Vector2.from_angle(a + w) * tip])
+		_glow.draw_colored_polygon(pts, Color(1.0, 0.88, 0.4, 0.42))
+
+
+## ㅠㅠ 눈물 두 줄기 (눈 아래 파란 물방울)
+func _draw_tears(c: Control) -> void:
+	# 그림이 실제로 그려진 자리 기준 (가운데 맞춤으로 오른쪽을 잘라낸 그림도 맞게)
+	var img := c.get_parent() as TextureRect
+	var tsz := Vector2(48, 48)
+	if img and img.texture:
+		tsz = img.texture.get_size()
+	var k := minf(c.size.x / tsz.x, c.size.y / tsz.y)
+	var o := (c.size - tsz * k) / 2.0
+	var u := tsz.y / 48.0 * k          # 48칸 격자 한 칸 크기
+	var col := Color(0.42, 0.7, 0.96, 0.95)
+	for ex in [14.3, 29.7]:
+		var top := o + Vector2(ex, 27.2) * u
+		var r := u * 1.05
+		for j in 3:   # 위에서 아래로 흐르는 물방울
+			c.draw_circle(top + Vector2(0, j * r * 1.7), r * (0.7 + 0.15 * j), col)
+
+
+## 실패했을 때 얼굴: ㅡ.ㅡ 아니면 잠자는 얼굴 (랜덤)
+func _overlay_sad_face(dog_id: String) -> void:
+	_overlay_face(dog_id, ["line", "closed"].pick_random())
+
+
+## 💢 그리기 (사진 모드와 같은 모양)
+func _draw_anger(ci: CanvasItem, c: Vector2, rr: float) -> void:
+	var col := Color(0.93, 0.18, 0.24)
+	var w := maxf(3.0, rr * 0.28)
+	for q in [Vector2(1, 1), Vector2(1, -1), Vector2(-1, 1), Vector2(-1, -1)]:
+		var p0: Vector2 = c + Vector2(q.x * 0.3, q.y) * rr
+		var p2: Vector2 = c + Vector2(q.x, q.y * 0.3) * rr
+		var k: Vector2 = c + q * 0.3 * rr
+		var pts := PackedVector2Array()
+		for j in 13:
+			var t := j / 12.0
+			pts.append(p0 * (1 - t) * (1 - t) + k * 2.0 * (1 - t) * t + p2 * t * t)
+		ci.draw_polyline(pts, col, w, true)
+		ci.draw_circle(p0, w * 0.5, col)
+		ci.draw_circle(p2, w * 0.5, col)
+
+
+# ── 이야기 장면 (진영 이동 이벤트) ──
+## 한 장 = {"text", "btn", "cast": [[그림 id, 눈, 표시("", "tears", "anger")], ...]} (1~3마리)
+var _story: Array = []
+var _story_title := ""
+var _story_done: Callable
+
+
+func _play_story(title: String, pages: Array, on_done: Callable) -> void:
+	_story = pages.duplicate()
+	_story_title = title
+	_story_done = on_done
+	rel_overlay.hide()
+	_story_next()
+
+
+func _story_next() -> void:
+	if _story.is_empty():
+		var cb := _story_done
+		_story_done = Callable()
+		if cb.is_valid():
+			cb.call()
+		return
+	var pg: Dictionary = _story.pop_front()
+	_open_overlay(str(pg.get("reveal", _story_title)), pg["text"], "story")
+	_overlay_cast(pg["cast"])
+	if pg.has("item"):   # 아이템 한 개가 빛나는 장면 (두루마리)
+		overlay_image.texture = FoodIcon.item_texture(pg["item"])
+		overlay_image.custom_minimum_size = Vector2(180, 180)
+		overlay_image.material = null
+		overlay_image.show()
+		_start_glow()
+	confirm_button.text = pg["btn"]
+	confirm_button.show()
+	if pg.get("party", false):
+		celebration.play("", "", get_viewport_rect().size / 2 - celebration.global_position)
+
+
+## 창 가운데 그림 1~3마리 + 표정 + 표시
+func _overlay_cast(cast: Array) -> void:
+	var imgs := [overlay_image, overlay_image2, overlay_image3]
+	var side := 180.0   # 1~3마리 모두 같은 크기 → 창 크기가 장마다 안 바뀜
+	for i in 3:
+		var img: TextureRect = imgs[i]
+		img.visible = i < cast.size()
+		_tear_marks[i].hide()
+		_anger_marks[i].hide()
+		if i >= cast.size():
+			continue
+		var c: Array = cast[i]
+		var id: String = c[0]
+		var base: String = id.trim_suffix("_jin").trim_suffix("_shu")
+		var form := 2
+		if GameData.DOGS.has(id) and GameState.owns(id):
+			form = PuppyView.STAGE_FORM[GameState.stage_of(id)]
+		img.custom_minimum_size = Vector2(side, side)
+		img.texture = _dog_tex(id, form, c[1]) if GameData.DOGS.has(id) or base != id else null
+		var mark: String = c[2] if c.size() > 2 else ""
+		img.material = _silhouette_mat() if mark == "sil" else null   # 스포 방지: 회색 그림자
+		_tear_marks[i].visible = mark == "tears"
+		_anger_marks[i].visible = mark == "anger"
+		_tear_marks[i].queue_redraw()
+		_anger_marks[i].queue_redraw()
+
+
+## 멍냥이 이야기 목록 (도감에서 다시 보기). 새 이야기는 여기와 _story_book() 에 추가
+const STORY_IDS: Array[String] = ["xiahou_ba", "sima_yi", "liu_bang"]
+
+
+## 이야기 내용: {"title", "pages"}
+func _story_book(id: String) -> Dictionary:
+	match id:
+		"xiahou_ba":
+			return {"title": "하후패 강아지 이야기", "pages": [
+				{"text": "사마의 고양이가 위나라에서 큰 소동을 일으켰어요.\n하후패 강아지는 무서웠어요.", "btn": "걱정마",
+					"cast": [["sima_yi", "line", "anger"], ["xiahou_ba", "closed", "tears"]]},
+				{"text": "그때 장비 강아지와 유선 강아지가\n하후패 강아지를 안아줬어요!", "btn": "다행이야!!",
+					"cast": [["zhang_fei", "squint"], ["xiahou_ba", "squint"], ["liu_shan", "squint"]]},
+				{"text": "하후패 강아지는 촉으로 진영을 옮기기로 했어요!", "btn": "잘 됐다!",
+					"cast": [["xiahou_ba_shu", "squint"]], "party": true},
+			]}
+		"sima_yi":
+			return {"title": "사마의 고양이 이야기", "pages": [
+				{"text": "사마의 고양이에게 조조 강아지가 찾아왔어요.", "btn": "무슨 일이야?",
+					"cast": [["cao_cao", "open"], ["sima_yi", "open"]]},
+				{"text": "\"목이랑 몸이 이상해!\n너, 사실은 늑대 아니야?\"", "btn": "아니야!",
+					"cast": [["cao_cao", "line", "anger"], ["sima_yi", "half"]]},
+				{"text": "\"고양이인 척 해 봤자 소용없어!\"", "btn": "뭐?!",
+					"cast": [["cao_cao", "line", "anger"], ["sima_yi", "closed", "tears"]]},
+				{"text": "사마의 고양이는 큰 결심을 했어요.", "btn": "뭔데?",
+					"cast": [["sima_yi", "line"]]},
+				{"text": "바로... 자신의 나라를 만들기로!", "btn": "대단해!",
+					"cast": [["sima_yi_jin", "squint"]]},
+				{"text": "사마의 고양이의 새 진영, 진이 생겼어요!\n이제 새로운 진나라의 멍냥이들을 만날 수 있어요!", "btn": "확인",
+					"cast": [["sima_yi_jin", "squint"]], "party": true},
+			]}
+		"liu_bang":   # 진까지 다 모으면: 서고의 두루마리가 빛나며 초한지 멍냥이들이 나타남
+			return {"title": "낡은 두루마리 이야기", "pages": [
+				{"text": "모든 멍냥이를 다 모았어요!", "btn": "우와!",
+					"cast": [["liu_bei", "squint"], ["cao_cao", "squint"], ["sun_quan", "squint"]]},
+				{"text": "어라..?", "btn": "무슨 일이야?",
+					"cast": [["liu_bei", "open"], ["cao_cao", "open"], ["sun_quan", "open"]]},
+				{"text": "서고 속 오래된 두루마리가\n빛나기 시작했어요!", "btn": "이 빛은..?!",
+					"cast": [], "item": "item_scroll"},
+				{"text": "축하해요!\n400년 전 역사 속 멍냥이들이 해금되었어요!\n뽑기에서 새로운 멍냥이들을 만날 수 있어요!", "btn": "신난다!",
+					"cast": [["liu_bang", "squint", "sil"], ["xiang_yu", "squint", "sil"]], "party": true},
+			]}
+	return {}
+
+
+
+
+# ═════════════════════════ 도감: 기록 모아 보기 ═════════════════════════
+## tab: rank(칭호) / special(스페셜 칭호) / group(단체 칭호) / story(이야기)
+const REC_TABS := [["rank", "칭호"], ["special", "스페셜"], ["group", "단체"], ["story", "이야기"]]
+const STORY_HINTS := {
+	"xiahou_ba": "하후패를 어른까지 키우기",
+	"sima_yi": "사마의를 어른으로 키우고 친밀도 50",
+	"liu_bang": "진나라까지 모든 멍냥이 모으기",
+}
+var _rec_tab := "rank"
+
+
+func _show_records(tab: String) -> void:
+	_rec_tab = tab
+	_log("기록 화면: " + tab)
+	var v := _new_page()
+	_page_header(v, "← 도감", _show_dex, "칭호 · 이야기")
+	var tabs := HBoxContainer.new()
+	tabs.add_theme_constant_override("separation", 8)
+	v.add_child(tabs)
+	for t in REC_TABS:
+		var b := _button(t[1], _show_records.bind(t[0]))
+		b.custom_minimum_size = Vector2(0, 76)
+		b.size_flags_horizontal = SIZE_EXPAND_FILL
+		b.add_theme_font_size_override("font_size", _fs(24))
+		if t[0] == tab:   # 고른 탭 = 노란 단색
+			b.add_theme_stylebox_override("normal", _box(YELLOW, 18))
+			b.add_theme_stylebox_override("hover", _box(YELLOW.lightened(0.08), 18))
+			b.add_theme_stylebox_override("pressed", _box(YELLOW.darkened(0.1), 18))
+		else:             # 나머지 = 노란 테두리
+			_yellow_outline(b)
+		tabs.add_child(b)
+	var head := VBoxContainer.new()
+	head.add_theme_constant_override("separation", 6)
+	v.add_child(head)
+	# 목록: 오른쪽에 잡기 쉬운 스크롤 막대 (막대 자리만큼 비워서 카드와 안 겹치게)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_fat_scrollbar(scroll)
+	v.add_child(scroll)
+	var pad := MarginContainer.new()
+	pad.size_flags_horizontal = SIZE_EXPAND_FILL
+	pad.add_theme_constant_override("margin_right", int(REL_BAR_W) + 10)
+	scroll.add_child(pad)
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 10)
+	pad.add_child(list)
+	_drag_scroll(scroll, pad)
+	match tab:
+		"rank":
+			_rec_ranks(head, list)
+		"special":
+			_rec_specials(head, list)
+		"group":
+			_rec_groups(head, list)
+		"story":
+			_rec_stories(head, list)
+
+
+const YELLOW := Color(0.94, 0.7, 0.16)
+
+
+## 노란 테두리 버튼 (누르면 노란 단색)
+func _yellow_outline(b: Button) -> void:
+	b.add_theme_stylebox_override("normal", _card_box(Color(1, 0.98, 0.92), YELLOW, 4))
+	b.add_theme_stylebox_override("hover", _card_box(Color(1, 0.96, 0.86), YELLOW, 4))
+	b.add_theme_stylebox_override("pressed", _box(YELLOW, 18))
+	for key in ["font_color", "font_hover_color", "font_focus_color"]:
+		b.add_theme_color_override(key, YELLOW.darkened(0.35))
+	b.add_theme_color_override("font_pressed_color", Color.WHITE)
+
+
+## 작은 얼굴 (안 데려온 애는 검은 그림자)
+func _rec_face(id: String, side: float, dim := false) -> TextureRect:
+	var t := TextureRect.new()
+	var owned := GameState.owns(id)
+	var form: int = PuppyView.STAGE_FORM[GameState.stage_of(id)] if owned else 2
+	t.texture = _centered_tex(_dog_tex(id, form, "open"))
+	t.custom_minimum_size = Vector2(side, side)
+	t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	t.mouse_filter = MOUSE_FILTER_IGNORE
+	if not owned:
+		t.modulate = Color(0, 0, 0, 0.3)
+	elif dim:
+		t.modulate = Color(0.6, 0.6, 0.6, 0.55)
+	return t
+
+
+func _rec_count(head: VBoxContainer, text: String, hint: String) -> void:
+	head.add_child(_label(text, 30))
+	if hint != "":
+		var h := _label(hint, 18)
+		h.add_theme_color_override("font_color", SUB_COLOR)
+		h.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		head.add_child(h)
+
+
+func _rec_name(id: String) -> String:
+	return GameData.DOGS[id]["name"] if GameState.owns(id) else "???"
+
+
+# ── 칭호: 단계표 + 칭호 받은 멍냥이 (높은 순) ──
+func _rec_ranks(head: VBoxContainer, list: VBoxContainer) -> void:
+	var ids: Array = []
+	for id in GameState.owned:
+		if GameState.rank_of(id) > 0:
+			ids.append(id)
+	ids.sort_custom(func(a: String, b: String) -> bool:
+		var ea := int(GameState.battle_exp.get(a, 0))
+		var eb := int(GameState.battle_exp.get(b, 0))
+		return ea > eb if ea != eb else GameData.DOGS[a]["name"] < GameData.DOGS[b]["name"])
+	_rec_count(head, "칭호 받은 멍냥이 %d마리" % ids.size(), "대전에서 이길수록 전공이 쌓여 칭호가 올라가요")
+	# 단계표
+	for pair in [["무장", GameData.WAR_RANKS, "guan_yu"], ["책사", GameData.STRAT_RANKS, "zhuge_liang"]]:
+		var row := HFlowContainer.new()
+		row.alignment = FlowContainer.ALIGNMENT_CENTER
+		row.add_theme_constant_override("h_separation", 6)
+		row.add_theme_constant_override("v_separation", 6)
+		var l := _label(pair[0] + "  ", 20)
+		l.add_theme_color_override("font_color", SUB_COLOR)
+		row.add_child(l)
+		var ranks: Array = pair[1]
+		for i in ranks.size():
+			if ranks[i] == "황제":
+				var e = EmperorTagScript.new()
+				e.setup("황제", "gold", _fs(17))
+				row.add_child(e)
+				continue
+			var t = ShinyTagScript.new()
+			t.setup(ranks[i], GameData.rank_color(i + 1), "plain", _fs(17))
+			row.add_child(t)
+		head.add_child(row)
+	if ids.is_empty():
+		var none := _label("아직 칭호를 받은 멍냥이가 없어요", 22)
+		none.add_theme_color_override("font_color", SUB_COLOR)
+		list.add_child(none)
+		return
+	for id in ids:
+		var card := _card_row()
+		var h: HBoxContainer = card.get_child(0)
+		h.add_child(_rec_face(id, 72))
+		var col := VBoxContainer.new()   # 위: 이름 + 칭호 / 아래: 전공 막대 + 숫자
+		col.size_flags_horizontal = SIZE_EXPAND_FILL
+		col.alignment = BoxContainer.ALIGNMENT_CENTER
+		col.add_theme_constant_override("separation", 4)
+		h.add_child(col)
+		var top := HBoxContainer.new()
+		top.add_theme_constant_override("separation", 10)
+		col.add_child(top)
+		var name_l := _label(GameData.DOGS[id]["name"], 26)
+		name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		top.add_child(name_l)
+		var rt := _rank_tag(id, 18)
+		if rt:
+			top.add_child(rt)
+		var rp: Dictionary = GameState.rank_progress(id)
+		var lv := int(rp["lv"])
+		var bar := ProgressBar.new()
+		bar.show_percentage = false
+		bar.custom_minimum_size = Vector2(0, 14)
+		bar.size_flags_horizontal = SIZE_EXPAND_FILL
+		bar.mouse_filter = MOUSE_FILTER_IGNORE
+		bar.add_theme_stylebox_override("background", _box(_bar_bg(GameData.rank_bar_color(id, lv), lv), 7))
+		bar.add_theme_stylebox_override("fill", _box(GameData.rank_bar_color(id, lv).darkened(0.05), 7))
+		var num: Label
+		if int(rp["next"]) < 0:
+			bar.max_value = 1
+			bar.value = 1
+			num = _label("최고 칭호! (전공 %d)" % rp["exp"], 16)
+		else:
+			bar.max_value = int(rp["next"]) - int(rp["prev"])
+			bar.value = int(rp["exp"]) - int(rp["prev"])
+			num = _label("%d / %d" % [int(rp["exp"]) - int(rp["prev"]), int(rp["next"]) - int(rp["prev"])], 16)
+		num.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		num.add_theme_color_override("font_color", SUB_COLOR)
+		col.add_child(bar)
+		col.add_child(num)
+		list.add_child(card)
+
+
+# ── 스페셜 칭호: 받은 것만 (받기 전엔 누구랑인지도 비밀) ──
+func _rec_specials(head: VBoxContainer, list: VBoxContainer) -> void:
+	var done: Array = []
+	var total := 0
+	for sp in GameData.SPECIAL_TITLES:
+		if not (GameData.available(sp["a"]) and GameData.available(sp["b"])):
+			continue
+		total += 1
+		if GameState.pair_win_count(sp["a"], sp["b"]) >= int(sp["wins"]):
+			done.append(sp)
+	_rec_count(head, "스페셜 칭호 %d / %d" % [done.size(), total],
+		"대전에서 불꽃 표시가 뜨는 짝꿍과 %d번 이기면 받아요" % int(GameData.SPECIAL_TITLES[0]["wins"]))
+	if done.is_empty():
+		var none := _label("아직 받은 스페셜 칭호가 없어요.\n대전에서 멍냥이를 고를 때\n불꽃이 뜨는 짝꿍을 찾아봐요!", 24)
+		none.add_theme_color_override("font_color", SUB_COLOR)
+		list.add_child(none)
+		return
+	for sp in done:
+		var fc := _special_colors(sp["name"])   # 칭호 색 그대로 액자 테두리
+		var card = FramePanelScript.new()
+		card.setup(fc[0], fc[1], 18)
+		var col := VBoxContainer.new()
+		col.add_theme_constant_override("separation", 12)
+		card.add_child(col)
+		var top := CenterContainer.new()
+		top.add_child(_special_tag(sp["name"], 36))
+		col.add_child(top)
+		var mem := HBoxContainer.new()
+		mem.alignment = BoxContainer.ALIGNMENT_CENTER
+		mem.add_theme_constant_override("separation", 40)
+		for m in [sp["a"], sp["b"]]:
+			var mv := VBoxContainer.new()
+			mv.add_theme_constant_override("separation", 0)
+			mv.add_child(_rec_face(m, 180))
+			mv.add_child(_label(GameData.DOGS[m]["name"], 30))
+			mem.add_child(mv)
+		col.add_child(mem)
+		list.add_child(card)
+
+
+# ── 단체 칭호 ──
+func _rec_groups(head: VBoxContainer, list: VBoxContainer) -> void:
+	var gs: Array = []
+	for g in GameData.GROUP_TITLES:
+		var ok := true
+		for m in g["members"]:
+			if not GameData.available(m):
+				ok = false
+		if ok:
+			gs.append(g)
+	var n := 0
+	for g in gs:
+		if GameState.group_done(g):
+			n += 1
+	_rec_count(head, "단체 칭호 %d / %d" % [n, gs.size()], "멤버를 모두 데려와서 모두 칭호 3단계(교위·참군) 이상이면 받아요")
+	for g in gs:
+		var got := GameState.group_done(g)
+		var card: PanelContainer
+		if got:   # 받은 단체 칭호: 칭호 색 그라데이션 액자 프레임
+			var gc := _group_colors(g["name"])
+			var fp = FramePanelScript.new()
+			fp.setup(gc[0], gc[1], 14)
+			card = fp
+		else:
+			card = PanelContainer.new()
+			var sb := _box(Color(0.97, 0.93, 0.86), 18)
+			sb.set_content_margin_all(20)
+			card.add_theme_stylebox_override("panel", sb)
+			card.mouse_filter = MOUSE_FILTER_PASS
+		var col := VBoxContainer.new()
+		col.add_theme_constant_override("separation", 12)
+		card.add_child(col)
+		var top := HBoxContainer.new()
+		top.alignment = BoxContainer.ALIGNMENT_CENTER
+		top.add_theme_constant_override("separation", 10)
+		if got:
+			top.add_child(_group_tag(g["name"], 32))
+		else:
+			top.add_child(_label(g["name"], 32))
+		var cnt := _label("%d / %d" % [GameState.group_count(g), (g["members"] as Array).size()], 26)
+		cnt.add_theme_color_override("font_color", Color(0.3, 0.6, 0.36) if got else SUB_COLOR)
+		top.add_child(cnt)
+		col.add_child(top)
+		var mem := HBoxContainer.new()
+		mem.alignment = BoxContainer.ALIGNMENT_CENTER
+		mem.add_theme_constant_override("separation", 10)
+		for m in g["members"]:
+			var mv := VBoxContainer.new()
+			mv.add_theme_constant_override("separation", 0)
+			var reached: bool = GameState.owns(m) and GameState.rank_of(m) >= GameData.GROUP_RANK
+			mv.add_child(_rec_face(m, 104 if (g["members"] as Array).size() <= 4 else 96, not reached))
+			var ml := _label(_rec_name(m), 22)
+			ml.add_theme_color_override("font_color", TEXT_COLOR if reached else SUB_COLOR)
+			mv.add_child(ml)
+			mem.add_child(mv)
+		col.add_child(mem)
+		list.add_child(card)
+
+
+# ── 이야기: 진영 이야기 + 스페셜 이야기 ──
+func _rec_stories(head: VBoxContainer, list: VBoxContainer) -> void:
+	var all: Array = []
+	for id in STORY_IDS:
+		if id != GameData.CHOHAN_STORY or GameData.jin_open():
+			all.append(id)
+	all += _sp_list()
+	var n := 0
+	for id in all:
+		if _story_seen(id):
+			n += 1
+	_rec_count(head, "본 이야기 %d / %d" % [n, all.size()], "본 이야기는 언제든 다시 볼 수 있어요")
+	for id in all:
+		var sp: bool = str(id).begins_with("sp_")
+		var title: String
+		var faces: Array
+		var hint: String
+		if sp:
+			var b := _sp_book(id)
+			title = b["title"]
+			faces = b["faces"]
+			hint = "%s · 공훈패 %d" % [b["cond"], GameData.SPECIAL_STORY_COST]
+		else:
+			title = _story_book(id)["title"]
+			faces = [id] if id != GameData.CHOHAN_STORY else ["liu_bang", "xiang_yu"]
+			hint = STORY_HINTS.get(id, "")
+		var seen := _story_seen(id)
+		var card := _card_row()
+		var h: HBoxContainer = card.get_child(0)
+		var fbox := HBoxContainer.new()
+		fbox.add_theme_constant_override("separation", -22)
+		for f in faces:
+			fbox.add_child(_rec_face(f, 104 if faces.size() <= 2 else 86, not seen))
+		h.add_child(fbox)
+		var info := VBoxContainer.new()
+		info.size_flags_horizontal = SIZE_EXPAND_FILL
+		info.alignment = BoxContainer.ALIGNMENT_CENTER
+		h.add_child(info)
+		var tl := _label(title if seen else "???", 32)
+		tl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		if not seen:
+			tl.add_theme_color_override("font_color", SUB_COLOR)
+		info.add_child(tl)
+		var hl := _label(("스페셜 이야기 · " if sp else "진영 이야기 · ") + hint, 21)
+		hl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		hl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		hl.add_theme_color_override("font_color", SUB_COLOR)
+		info.add_child(hl)
+		if seen:
+			h.add_child(_big_small(_small_button("다시 보기", _rec_replay.bind(id), "", Color(0.55, 0.45, 0.72))))
+		elif sp:
+			h.add_child(_big_small(_small_button("열러 가기", _show_sp_stories, "", Color(0.86, 0.6, 0.2))))
+		list.add_child(card)
+
+
+## _small_button 을 크게 (이야기 탭용)
+func _big_small(box: Control) -> Control:
+	var b := box.get_child(0) as Button
+	b.custom_minimum_size = Vector2(170, 84)
+	b.add_theme_font_size_override("font_size", _fs(28))
+	return box
+
+
+func _rec_replay(id: String) -> void:
+	var book := _sp_book(id) if id.begins_with("sp_") else _story_book(id)
+	if book.is_empty():
+		return
+	_play_story(book["title"], book["pages"], func() -> void:
+		_set_busy(false)
+		_show_records("story"))
+
+# ═════════════════════════ 스페셜 이야기 ═════════════════════════
+## 조건을 채우고 공훈패(대전에서 받음)를 내면 열리는 짧은 이야기. 한 번 열면 다시 보기 무료
+const SP_FIRST: Array[String] = ["sp_taoyuan", "sp_changban", "sp_guagu", "sp_kongcheng", "sp_fengyi", "sp_wancheng", "sp_chengdu"]
+var SP_STORIES: Array[String] = []   # 위 7개 + story_data.gd 의 이야기들 (처음 쓸 때 채움)
+
+
+## 지금 열린 진영 멍냥이만 나오는 이야기만 (진·한·초 열리기 전엔 숨김)
+func _sp_list() -> Array[String]:
+	if SP_STORIES.is_empty():
+		SP_STORIES.append_array(SP_FIRST)
+		SP_STORIES.append_array(StoryData.ORDER)
+	var out: Array[String] = []
+	for id in SP_STORIES:
+		var ok := true
+		for f in _sp_book(id).get("faces", []):
+			if not GameData.available(f):
+				ok = false
+		if ok:
+			out.append(id)
+	return out
+
+
+func _sp_book(id: String) -> Dictionary:
+	match id:
+		"sp_taoyuan":
+			return {"title": "복숭아 동산의 약속", "faces": ["liu_bei", "guan_yu", "zhang_fei"],
+				"cond": "유비·관우·장비가 서로 모두 의형제", "pages": [
+				{"text": "탁현의 복숭아 동산에 유비 강아지, 관우 강아지,\n장비 강아지가 모였어요.", "btn": "무슨 일이야?",
+					"cast": [["liu_bei", "open"], ["guan_yu", "half"], ["zhang_fei", "open"]]},
+				{"text": "\"우리 셋, 오늘부터 형제 하자!\"\n장비 강아지가 꼬리를 붕붕 흔들었어요.", "btn": "좋아!",
+					"cast": [["zhang_fei", "squint"], ["liu_bei", "open"], ["guan_yu", "half"]]},
+				{"text": "그런데... 누가 형님이지?\n셋은 서로 눈치를 봤어요.", "btn": "누굴까?",
+					"cast": [["liu_bei", "line"], ["guan_yu", "line"], ["zhang_fei", "line"]]},
+				{"text": "결국 제일 먼저 복숭아를 다 먹은\n유비 강아지가 큰형님이 되었어요!", "btn": "냠냠!",
+					"cast": [["liu_bei", "squint"], ["guan_yu", "closed", "tears"], ["zhang_fei", "closed", "tears"]]},
+				{"text": "세 강아지는 영원히 함께하기로 약속했어요!", "btn": "멋져!",
+					"cast": [["liu_bei", "squint"], ["guan_yu", "squint"], ["zhang_fei", "squint"]], "party": true},
+			]}
+		"sp_changban":
+			return {"title": "장판파의 아기", "faces": ["zhao_yun", "liu_shan"],
+				"cond": "조운·유선 하트 가득", "pages": [
+				{"text": "장판파에서 아기 유선 강아지가 길을 잃었어요!", "btn": "큰일이다!",
+					"cast": [["liu_shan", "closed", "tears"]]},
+				{"text": "그때 조운 강아지가 번개처럼 달려왔어요!", "btn": "빨리빨리!",
+					"cast": [["zhao_yun", "open"]]},
+				{"text": "조운 강아지는 유선 강아지를 품에 꼭 안고 달렸어요.", "btn": "영차영차!",
+					"cast": [["zhao_yun", "line"], ["liu_shan", "open"]]},
+				{"text": "유선 강아지는 품 안에서 쿨쿨 잠들어 버렸어요.", "btn": "귀여워..",
+					"cast": [["zhao_yun", "squint"], ["liu_shan", "closed"]]},
+				{"text": "무사히 유비 강아지 품으로 돌아왔어요!", "btn": "다행이다!",
+					"cast": [["liu_bei", "squint"], ["zhao_yun", "squint"], ["liu_shan", "squint"]], "party": true},
+			]}
+		"sp_guagu":
+			return {"title": "바둑 두는 관우", "faces": ["guan_yu", "hua_tuo"],
+				"cond": "관우·화타 둘 다 어른", "pages": [
+				{"text": "관우 강아지가 팔에 화살을 맞았어요.", "btn": "아야!",
+					"cast": [["guan_yu", "closed", "tears"]]},
+				{"text": "화타 고양이가 달려왔어요.\n\"뼈까지 싹싹 긁어야 해요!\"", "btn": "으악!",
+					"cast": [["hua_tuo", "open"], ["guan_yu", "half"]]},
+				{"text": "관우 강아지는 바둑을 두며 꾹 참았어요.", "btn": "대단해..",
+					"cast": [["guan_yu", "line"], ["hua_tuo", "line"]]},
+				{"text": "사실... 발가락이 꼼지락꼼지락 떨리고 있었어요.", "btn": "큭큭큭!",
+					"cast": [["guan_yu", "line", "tears"], ["hua_tuo", "squint"]]},
+				{"text": "치료 끝! 관우 강아지는 씩씩하게 다 나았어요!", "btn": "잘했어!",
+					"cast": [["guan_yu", "squint"], ["hua_tuo", "squint"]], "party": true},
+			]}
+		"sp_kongcheng":
+			return {"title": "텅 빈 성", "faces": ["zhuge_liang", "sima_yi"],
+				"cond": "제갈량·사마의 둘 다 어른", "pages": [
+				{"text": "사마의 고양이가 서성에 쳐들어왔어요!", "btn": "어떡해!",
+					"cast": [["sima_yi", "open"]]},
+				{"text": "그런데 성문이 활짝 열려 있고,\n제갈량 고양이가 거문고를 타고 있었어요.", "btn": "띵가띵가~",
+					"cast": [["zhuge_liang", "squint"]]},
+				{"text": "\"수상해... 분명 함정이야!\"\n사마의 고양이는 꼬리를 바짝 세웠어요.", "btn": "의심 많아!",
+					"cast": [["sima_yi", "line"], ["zhuge_liang", "squint"]]},
+				{"text": "사마의 고양이는 후다닥 도망쳤어요.\n사실 성은 텅텅 비어 있었답니다!", "btn": "휴우~",
+					"cast": [["zhuge_liang", "closed", "tears"]], "party": true},
+			]}
+		"sp_fengyi":
+			return {"title": "봉의정의 약속", "faces": ["lu_bu", "diao_chan"],
+				"cond": "여포·초선 커플", "pages": [
+				{"text": "여포 강아지는 초선 고양이를 무척 좋아했어요.", "btn": "알콩달콩",
+					"cast": [["lu_bu", "squint"], ["diao_chan", "squint"]]},
+				{"text": "그런데 동탁 강아지가\n초선 고양이를 데려가 버렸어요!", "btn": "뭐?!",
+					"cast": [["dong_zhuo", "open"], ["diao_chan", "closed", "tears"]]},
+				{"text": "여포 강아지는 화가 잔뜩 났어요.", "btn": "화났다!",
+					"cast": [["lu_bu", "line", "anger"]]},
+				{"text": "여포 강아지가 동탁 강아지를 혼내 주고,\n초선 고양이를 되찾았어요!", "btn": "멋져!",
+					"cast": [["lu_bu", "squint"], ["diao_chan", "squint"]], "party": true},
+			]}
+		"sp_wancheng":
+			return {"title": "완성의 밤", "faces": ["cao_cao", "dian_wei"],
+				"cond": "조조·전위 의형제", "pages": [
+				{"text": "깜깜한 밤, 적군이 조조 강아지를 노리고 몰려왔어요!", "btn": "위험해!",
+					"cast": [["cao_cao", "closed", "tears"]]},
+				{"text": "\"주공은 내가 지킨다!\"\n전위 강아지가 문 앞을 딱 막아섰어요.", "btn": "든든해!",
+					"cast": [["dian_wei", "line"]]},
+				{"text": "적군이 아무리 밀어도\n전위 강아지는 꿈쩍도 안 했어요.", "btn": "끄떡없어!",
+					"cast": [["dian_wei", "line"], ["cao_cao", "open"]]},
+				{"text": "아침이 되자 조조 강아지가\n전위 강아지를 꼬옥 안아 줬어요.", "btn": "고마워!",
+					"cast": [["cao_cao", "squint", "tears"], ["dian_wei", "squint"]], "party": true},
+			]}
+		"sp_chengdu":
+			return {"title": "누가 먼저 성도에?", "faces": ["deng_ai", "zhong_hui"],
+				"cond": "진나라가 열리고 등애·종회 둘 다 어른", "pages": [
+				{"text": "등애 강아지와 종회 고양이가 촉으로 출발했어요.", "btn": "출발!",
+					"cast": [["deng_ai", "open"], ["zhong_hui", "open"]]},
+				{"text": "\"내가 먼저 도착할 거야!\"\n둘은 서로 쌩쌩 달렸어요.", "btn": "경주다!",
+					"cast": [["deng_ai", "line"], ["zhong_hui", "line", "anger"]]},
+				{"text": "등애 강아지는 음평의 산길을\n데굴데굴 굴러 내려갔어요!", "btn": "데굴데굴~",
+					"cast": [["deng_ai", "closed"]]},
+				{"text": "1등은 등애 강아지!\n종회 고양이는 뾰로통해졌어요.", "btn": "아쉽다!",
+					"cast": [["deng_ai", "squint"], ["zhong_hui", "line", "anger"]], "party": true},
+			]}
+	if StoryData.BOOKS.has(id):   # 새 이야기들: 주인공 모두 어른이면 열림
+		var b: Dictionary = StoryData.BOOKS[id]
+		var names: Array[String] = []
+		for a in b["adult"]:
+			names.append(GameData.DOGS[a]["name"])
+		return {"title": b["title"], "faces": b["adult"], "cond": "·".join(PackedStringArray(names)) + " 모두 어른", "pages": b["pages"]}
+	return {}
+
+
+func _adult(id: String) -> bool:
+	return GameState.owns(id) and GameState.get_puppy(id).is_adult()
+
+
+## 이 스페셜 이야기 조건을 채웠는지
+func _sp_ready(id: String) -> bool:
+	match id:
+		"sp_taoyuan":
+			return GameState.is_sworn("liu_bei", "guan_yu") and GameState.is_sworn("liu_bei", "zhang_fei") \
+				and GameState.is_sworn("guan_yu", "zhang_fei")
+		"sp_changban":
+			return GameState.owns("zhao_yun") and GameState.owns("liu_shan") and (GameState.is_couple("zhao_yun", "liu_shan") \
+				or GameState.affinity_of("zhao_yun", "liu_shan") >= GameData.affinity_max("zhao_yun", "liu_shan"))
+		"sp_guagu":
+			return _adult("guan_yu") and _adult("hua_tuo")
+		"sp_kongcheng":
+			return _adult("zhuge_liang") and _adult("sima_yi")
+		"sp_fengyi":
+			return GameState.is_couple("lu_bu", "diao_chan")
+		"sp_wancheng":
+			return GameState.is_sworn("cao_cao", "dian_wei")
+		"sp_chengdu":
+			return GameData.jin_open() and _adult("deng_ai") and _adult("zhong_hui")
+	if StoryData.BOOKS.has(id):
+		for a in StoryData.BOOKS[id]["adult"]:
+			if not _adult(a):
+				return false
+		return true
+	return false
+
+
+## 스페셜 이야기 목록 화면
+func _show_sp_stories() -> void:
+	_log("스페셜 이야기 화면")
+	var v := _new_page()
+	_page_header(v, "← 홈", _show_home, "스페셜 이야기")
+	var have := HBoxContainer.new()
+	have.alignment = BoxContainer.ALIGNMENT_CENTER
+	have.add_theme_constant_override("separation", 8)
+	v.add_child(have)
+	var mi := TextureRect.new()
+	mi.texture = FoodIcon.item_texture("item_merit")
+	mi.custom_minimum_size = Vector2(56, 56)
+	mi.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	mi.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	have.add_child(mi)
+	have.add_child(_label("공훈패 %d개" % GameState.merits, 30))
+	var hint := _label("대전에서 이기면 공훈패를 받아요!", 20)
+	hint.add_theme_color_override("font_color", SUB_COLOR)
+	v.add_child(hint)
+	var list := _scroll_list(v)
+	for id in _sp_list():
+		list.add_child(_sp_card(id))
+
+
+func _sp_card(id: String) -> Control:
+	var book := _sp_book(id)
+	var row := _card_row()
+	var h: HBoxContainer = row.get_child(0)
+	var faces := HBoxContainer.new()
+	faces.add_theme_constant_override("separation", -18)   # 얼굴끼리 살짝 겹치게
+	h.add_child(faces)
+	var seen := GameState.story_seen(id)
+	var ok_ := _sp_ready(id)
+	for f in book["faces"]:
+		var t := TextureRect.new()
+		t.texture = _centered_tex(_dog_tex(f, 2, "squint" if seen else "open"))
+		t.custom_minimum_size = Vector2(78, 78)
+		t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		if not seen and not ok_:
+			t.modulate = Color(0.55, 0.55, 0.55, 0.6)
+		faces.add_child(t)
+	var info := VBoxContainer.new()
+	info.size_flags_horizontal = SIZE_EXPAND_FILL
+	info.alignment = BoxContainer.ALIGNMENT_CENTER
+	h.add_child(info)
+	var title := _label(book["title"] if seen else "???", 28)   # 제목은 끝까지 봐야 알 수 있음
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	info.add_child(title)
+	var cond := _label(("★ " if ok_ or seen else "") + str(book["cond"]), 18)
+	cond.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	cond.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	cond.add_theme_color_override("font_color", Color(0.3, 0.6, 0.36) if ok_ or seen else SUB_COLOR)
+	info.add_child(cond)
+	var cost := GameData.SPECIAL_STORY_COST
+	if seen:
+		h.add_child(_small_button("다시 보기", _open_sp_story.bind(id, false), "", Color(0.55, 0.45, 0.72)))
+	elif GameState.sp_paid.has(id):   # 열어 놓고 끝까지 못 본 이야기
+		h.add_child(_small_button("이어 보기", _open_sp_story.bind(id, false), "", Color(0.86, 0.6, 0.2)))
+	else:
+		var block := ""
+		if not ok_:
+			block = "조건을 채워요"
+		elif GameState.merits < cost:
+			block = "공훈패가 모자라요"
+		h.add_child(_small_button("열기 (공훈패 %d)" % cost, _open_sp_story.bind(id, true), block, Color(0.86, 0.6, 0.2)))
+	return row
+
+
+func _open_sp_story(id: String, pay: bool) -> void:
+	if pay:
+		if not _sp_ready(id) or GameState.merits < GameData.SPECIAL_STORY_COST or GameState.story_seen(id) \
+				or GameState.sp_paid.has(id):
+			return
+		GameState.merits -= GameData.SPECIAL_STORY_COST
+		GameState.sp_paid[id] = true
+		GameState.save_now()
+	var book := _sp_book(id)
+	_play_story(_sp_title_for_play(id, book), _sp_pages_for_play(id, book), func() -> void:
+		GameState.mark_story(id)   # 끝까지 봤으니 제목 공개 + 다시 보기
+		_set_busy(false)
+		_show_sp_stories())
+
+
+## 처음 볼 때는 제목이 ??? 였다가 마지막 장에서 공개
+func _sp_title_for_play(id: String, book: Dictionary) -> String:
+	return book["title"] if GameState.story_seen(id) else "???"
+
+
+func _sp_pages_for_play(id: String, book: Dictionary) -> Array:
+	var pages: Array = (book["pages"] as Array).duplicate(true)
+	if not GameState.story_seen(id) and not pages.is_empty():
+		(pages[-1] as Dictionary)["reveal"] = book["title"]
+	return pages
+
+## 이 멍냥이 이야기를 이미 봤는지 (도감 다시 보기 버튼)
+func _story_seen(id: String) -> bool:
+	return GameState.story_seen(id) or GameState.has_defected(id)
+
+
+## 진영 이동 이벤트가 열렸으면 시작 (시작했으면 true)
+const SIMA_YI_AFFECTION := 50   # 사마의 진 이야기: 어른 + 친밀도 50
+
+
+func _story_check() -> bool:
+	if overlay.visible or busy or _tut_step >= 0 or _btut_step >= 0 or not GameState.tutorial_done:
+		return false
+	var who := ""
+	# 하후패: 어른이 되면 바로 촉으로
+	if GameState.owns("xiahou_ba") and GameState.get_puppy("xiahou_ba").is_adult() and not GameState.has_defected("xiahou_ba"):
+		who = "xiahou_ba"
+	# 사마의: 어른이 된 뒤 친밀도 50 이 되면 진을 세움
+	elif GameState.owns("sima_yi") and GameState.get_puppy("sima_yi").is_adult() \
+			and not GameState.has_defected("sima_yi") \
+			and GameState.get_puppy("sima_yi").affection >= SIMA_YI_AFFECTION:
+		who = "sima_yi"
+	# 초한지: 진까지 모든 멍냥이를 모으면 → 한·초 열림 (뽑기에 나옴)
+	elif GameData.jin_open() and not GameData.chohan_open() and GameState.unowned().is_empty():
+		who = GameData.CHOHAN_STORY
+	if who == "":
+		return false
+	if who == GameData.CHOHAN_STORY:
+		var book0 := _story_book(who)
+		_play_story(book0["title"], book0["pages"], func() -> void:
+			GameState.mark_story(who)   # 한·초 열림 → 뽑기에 나옴
+			_after_story())
+		return true
+	var book := _story_book(who)
+	_play_story(book["title"], book["pages"], func() -> void:
+		GameState.defect(who)
+		GameState.mark_story(who)
+		_after_story())
+	return true
+
+
+## 도감에서 다시 보기 (효과 없이 이야기만). 끝나면 그 멍냥이 성장 창으로 돌아감
+func _replay_story(id: String) -> void:
+	var book := _story_book(id)
+	if book.is_empty():
+		return
+	_play_story(book["title"], book["pages"], func() -> void:
+		_set_busy(false)
+		_show_growth(id))
+
+
+## 이야기 끝: 화면 새로 그리기 (옷·진영 바뀜) + 다음 이벤트/튜토리얼
+func _after_story() -> void:
+	_set_busy(false)
+	if raise_screen.visible and puppy:
+		_show_raise(puppy.dog_id)
+	elif page:
+		_show_home()
+	if not _story_check():
+		_btut_check()
+
+
+## 헤어지기 → 확인창
+var _breakup_target := ""
+
+
+func _on_breakup(other: String) -> void:
+	if not GameState.is_couple(puppy.dog_id, other):
+		return
+	_breakup_target = other
+	var nm: String = GameData.DOGS[other]["name"]
+	_open_overlay("헤어지기", "정말 헤어질까요?\n%s %s가 슬퍼할 수도 있어요.." % [nm, GameData.species(other)], "breakup_confirm")
+	_overlay_face(other, "open")
+	var grey := Color(0.6, 0.58, 0.62)
+	confirm_button.text = "헤어지기"
+	confirm_button.add_theme_stylebox_override("normal", _box(grey, 18))
+	confirm_button.add_theme_stylebox_override("hover", _box(grey.lightened(0.1), 18))
+	confirm_button.add_theme_stylebox_override("pressed", _box(grey.darkened(0.15), 18))
+	confirm_button.show()
+	cancel_button.show()
+
+
+func _do_breakup() -> void:
+	var me := puppy.dog_id
+	var other := _breakup_target
+	_breakup_target = ""
+	if other == "" or not GameState.is_couple(me, other):
+		return
+	GameState.break_up(me, other)
+	var nm: String = GameData.DOGS[other]["name"]
+	_open_overlay("토라졌어요..", "%s %s가 토라졌어요.\n클로버를 %d개 선물해야 화해할 수 있어요." % [nm, GameData.species(other), GameData.MAKEUP_CLOVERS], "notice")
+	_overlay_face(other, "line", true)   # 화난 얼굴 💢
+	confirm_button.show()
+	_log("헤어짐: %s - %s" % [me, other])
+	rel_msg.text = " "
 	_fill_relations()
+	_update_relations()
+
+
+## 클로버 선물 (토라진 애 / 앙숙)
+func _on_clover(other: String) -> void:
+	var me := puppy.dog_id
+	var result: String = GameState.give_clover(me, other)
+	if result == "":
+		return
+	var nm: String = GameData.DOGS[other]["name"]
+	if result == "gave":
+		rel_msg.text = "%s에게 클로버를 선물했어요! (%d/%d)" % [nm, GameState.clover_count(me, other), GameData.MAKEUP_CLOVERS]
+	else:
+		rel_msg.text = " "
+		_open_overlay("화해했어요!", "%s %s와 화해했어요.\n이제 친하게 지내!" % [nm, GameData.species(other)], "notice")
+		_overlay_face(other, "squint")
+		confirm_button.show()
+		_update_relations()
+	_log("클로버: %s -> %s (%s)" % [me, other, result])
+	if GameState.item_count("clover") <= 0:
+		_fill_relations()
+	else:
+		_refresh_rel_card(other)
 
 
 func _on_confess(other: String) -> void:
@@ -1865,9 +3186,11 @@ func _on_confess(other: String) -> void:
 	var other_name: String = GameData.DOGS[other]["name"]
 	_set_busy(true)
 	_open_overlay("고백 중...", "%s ♥ %s\n\n두근두근..." % [me_name, other_name], "notice")
+	_overlay_face(other, "open")
 	await get_tree().create_timer(1.0).timeout
 	if randf() >= GameData.confess_chance(me, other):
 		GameState.reset_affinity(me, other)
+		_overlay_sad_face(other)
 		overlay_title.text = "고백이 실패했어요.."
 		overlay_log.text = "%s%s %s\n\n다른 좋은 털뭉치 만나..\n(하트가 처음으로 돌아갔어요)" % [other_name, _ig(other_name), "고개를 저었어요" ]
 		_log("고백 실패: %s - %s" % [me, other])
@@ -1875,6 +3198,7 @@ func _on_confess(other: String) -> void:
 		confirm_button.show()
 		return
 	GameState.add_couple(me, other)
+	_overlay_face(other, "squint")
 	overlay_title.text = "커플이 되었습니다!"
 	overlay_log.text = "%s ♥ %s\n\n오늘부터 1일 ♥" % [me_name, other_name]
 	celebration.play("커플이 되었습니다!", "%s ♥ %s" % [me_name, other_name],
@@ -1893,11 +3217,11 @@ func _on_swear(other: String) -> void:
 	var other_name: String = GameData.DOGS[other]["name"]
 	_set_busy(true)
 	_open_overlay("의형제", "복숭아 동산에서...\n\n%s, %s" % [me_name, other_name], "notice")
-	overlay_image.texture = FoodIcon.item_texture("item_peach")
-	overlay_image.show()
+	_overlay_face(other, "open")
 	await get_tree().create_timer(1.0).timeout
 	if randf() >= GameData.swear_chance(me, other):
 		GameState.reset_gifts(me, other)
+		_overlay_sad_face(other)
 		overlay_title.text = "의형제를 맺지 못했어요.."
 		overlay_log.text = "%s%s 아직 마음을 열지 않았어요.\n\n(복숭아가 처음으로 돌아갔어요)" % [other_name, _ig(other_name)]
 		_log("의형제 실패: %s - %s" % [me, other])
@@ -1905,6 +3229,7 @@ func _on_swear(other: String) -> void:
 		confirm_button.show()
 		return
 	GameState.add_sworn(me, other)
+	_overlay_face(other, "squint")
 	overlay_title.text = "의형제가 되었어요!"
 	overlay_log.text = "%s, %s\n\n태어난 날은 달라도\n같은 날 같이 간식 먹자!" % [me_name, other_name]
 	celebration.play("의형제!", "%s · %s" % [me_name, other_name],
@@ -1912,6 +3237,1089 @@ func _on_swear(other: String) -> void:
 	_log("의형제: %s - %s" % [me, other])
 	_update_relations()
 	confirm_button.show()
+
+
+# ═════════════════════════ 대전 (미니게임) ═════════════════════════
+## 무장 1 + 책사 1 출전 → 5판 3선승 카드 대결. 관계(신뢰/의형제/커플/같은 진영/앙숙)에 따라 스킬이 달라짐
+
+const CARD_COLORS := {"cav": Color(0.84, 0.42, 0.3), "arc": Color(0.36, 0.62, 0.36),
+	"spr": Color(0.32, 0.5, 0.78), "fire": Color(0.93, 0.52, 0.16)}
+
+var _mini_stage := 0
+var _mini_war := ""
+var _mini_strat := ""
+var _mini_cards: Dictionary = {}     # dog_id -> 고르기 카드 버튼
+var _mini_go: Button
+var _mini_bonus_box: VBoxContainer   # 관계 보너스 줄들 (보너스 있을 때만)
+var _mini_bonus_key := ""            # 같은 짝이면 다시 뿅 안 함
+var _mb: Dictionary = {}             # 대결 상태
+var _mb_ui: Dictionary = {}          # 대결 화면 노드들
+
+
+func _show_mini() -> void:
+	_log("대전")
+	var v := _new_page()
+	_page_header(v, "← 홈", _show_home, "대전")
+	var info := _label("무장 1마리 + 책사 1마리로 출전!\n기병 > 궁병 > 창병 > 기병, 화공은 무조건 승리\n먼저 3번 이기면 승리 · 싸울수록 전공이 쌓여 칭호가 올라가요", 22)
+	info.add_theme_color_override("font_color", SUB_COLOR)
+	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(info)
+	var list := _scroll_list(v)
+	for i in GameData.MINI_STAGES.size():
+		var st: Dictionary = GameData.MINI_STAGES[i]
+		var locked := i > GameState.mini_cleared
+		var status := "잠겨 있어요 (앞 단계를 깨면 열려요)" if locked else ("클리어!" if i < GameState.mini_cleared else "도전!")
+		if i >= 3:
+			status += "  · 매우 어려움!"
+		var b := _button("%d단계  %s\n%s" % [i + 1, st["name"], status], _mini_pick.bind(i))
+		b.custom_minimum_size = Vector2(0, 120)
+		b.add_theme_font_size_override("font_size", _fs(26))
+		b.disabled = locked
+		if i < GameState.mini_cleared:
+			var gold := Color(0.95, 0.74, 0.22)
+			b.add_theme_stylebox_override("normal", _card_box(Color(1.0, 0.97, 0.86), gold, 4))
+			b.add_theme_stylebox_override("hover", _card_box(Color(1.0, 0.95, 0.8), gold, 4))
+			for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+				b.add_theme_color_override(key, TEXT_COLOR)
+		list.add_child(b)
+
+
+## 출전할 무장·책사 고르기 (어른만)
+##   위: 빈 칸 2개 (강아지 그림자 / 고양이 그림자) → 고르면 그 칸에 들어감
+##   아래: [무장|책사] 탭 + [위|촉|오|스페셜] 탭 + 목록
+const MINI_FAC_ORDER: Array[String] = ["wei", "shu", "wu", "jin", "han", "chu", "special"]
+var _mini_role := "war"
+var _mini_fac := "wei"
+var _mini_slots: Dictionary = {}     # "war"/"strat" -> {"pic": TextureRect, "name": Label}
+var _mini_tabs: Dictionary = {}      # "war"/"strat"/진영 -> 탭 버튼
+var _mini_list: VBoxContainer
+
+
+func _mini_pick(stage_i: int) -> void:
+	_mini_stage = stage_i
+	var v := _new_page()
+	_page_header(v, "← 뒤로", _show_mini, GameData.MINI_STAGES[stage_i]["name"])
+	if _mini_war != "" and not _mini_ok(_mini_war):
+		_mini_war = ""
+	if _mini_strat != "" and not _mini_ok(_mini_strat):
+		_mini_strat = ""
+	# 출전 칸 2개
+	var slots := HBoxContainer.new()
+	slots.alignment = BoxContainer.ALIGNMENT_CENTER
+	slots.add_theme_constant_override("separation", 24)
+	v.add_child(slots)
+	_mini_slots = {}
+	for role in ["war", "strat"]:
+		var col := VBoxContainer.new()
+		col.add_theme_constant_override("separation", 4)
+		slots.add_child(col)
+		var box := Button.new()
+		box.custom_minimum_size = Vector2(210, 210)
+		box.focus_mode = Control.FOCUS_NONE
+		var edge := Color(0.86, 0.52, 0.32)
+		box.add_theme_stylebox_override("normal", _card_box(Color(1, 0.98, 0.94), edge, 4))
+		box.add_theme_stylebox_override("hover", _card_box(Color(1, 0.95, 0.88), edge, 4))
+		box.add_theme_stylebox_override("pressed", _card_box(Color(0.98, 0.9, 0.8), edge, 4))
+		box.pressed.connect(_mini_set_role.bind(role))
+		col.add_child(box)
+		var pic := TextureRect.new()
+		pic.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+		pic.offset_left = 12
+		pic.offset_top = 12
+		pic.offset_right = -12
+		pic.offset_bottom = -12
+		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		pic.mouse_filter = MOUSE_FILTER_IGNORE
+		box.add_child(pic)
+		var nm := _label("", 24)
+		col.add_child(nm)
+		_mini_slots[role] = {"pic": pic, "name": nm}
+	_mini_bonus_box = VBoxContainer.new()
+	_mini_bonus_box.add_theme_constant_override("separation", 6)
+	v.add_child(_mini_bonus_box)
+	_mini_bonus_key = ""
+	# 무장 / 책사 탭
+	_mini_tabs = {}
+	var role_row := HBoxContainer.new()
+	role_row.add_theme_constant_override("separation", 10)
+	v.add_child(role_row)
+	for r in [["war", "무장"], ["strat", "책사"]]:
+		var t := _button(r[1], _mini_set_role.bind(r[0]))
+		t.custom_minimum_size = Vector2(0, 70)
+		t.size_flags_horizontal = SIZE_EXPAND_FILL
+		t.add_theme_font_size_override("font_size", _fs(26))
+		role_row.add_child(t)
+		_mini_tabs[r[0]] = t
+	# 위 / 촉 / 오 / 스페셜 탭
+	var fac_row := HBoxContainer.new()
+	fac_row.add_theme_constant_override("separation", 8)
+	v.add_child(fac_row)
+	for fid in MINI_FAC_ORDER:
+		if not GameData.faction_open(fid):
+			continue
+		var t := _button(GameData.FACTIONS[fid]["name"], _mini_set_fac.bind(fid))
+		t.custom_minimum_size = Vector2(0, 60)
+		t.size_flags_horizontal = SIZE_EXPAND_FILL
+		t.add_theme_font_size_override("font_size", _fs(22))
+		fac_row.add_child(t)
+		_mini_tabs[fid] = t
+	_mini_list = _scroll_list(v)
+	_mini_go = _button("출전!", _mini_start)
+	_mini_go.custom_minimum_size = Vector2(0, 100)
+	_mini_go.add_theme_stylebox_override("disabled", _box(Color(0.72, 0.7, 0.68), 18))
+	_mini_go.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.85))
+	v.add_child(_mini_go)
+	_mini_refresh_pick()
+
+
+## 고르기 카드: 그림 / (관계 태그) / 이름 / (칭호)
+func _mini_pick_card(id: String, ref: String) -> Button:
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(0, 330)
+	b.size_flags_horizontal = SIZE_EXPAND_FILL
+	b.focus_mode = Control.FOCUS_NONE
+	var on: bool = id == _mini_war or id == _mini_strat
+	var bg := Color(1.0, 0.93, 0.95) if on else Color(1, 0.98, 0.94)
+	var edge := PINK if on else Color(0.86, 0.52, 0.32)
+	b.add_theme_stylebox_override("normal", _card_box(bg, edge, 7 if on else 4))
+	b.add_theme_stylebox_override("hover", _card_box(bg.darkened(0.03), edge, 7 if on else 4))
+	b.add_theme_stylebox_override("pressed", _card_box(bg.darkened(0.08), edge, 7 if on else 4))
+	b.pressed.connect(_mini_select.bind(id))
+	var box := VBoxContainer.new()
+	box.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	box.offset_top = 8
+	box.offset_bottom = -8
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_theme_constant_override("separation", 4)
+	box.mouse_filter = MOUSE_FILTER_IGNORE
+	b.add_child(box)
+	# 스페셜 칭호를 받을 수 있는 짝꿍이면 오른쪽 위에 불꽃 (아직 안 받았을 때만)
+	if ref != "" and ref != id:
+		var sp: Dictionary = GameData.special_for(ref, id)
+		if not sp.is_empty() and GameState.pair_win_count(ref, id) < int(sp["wins"]):
+			var fire = RpsIconScript.new()
+			fire.kind = "fire"
+			fire.mouse_filter = MOUSE_FILTER_IGNORE
+			fire.set_anchors_preset(PRESET_TOP_RIGHT)
+			fire.offset_left = -58
+			fire.offset_right = -8
+			fire.offset_top = 8
+			fire.offset_bottom = 58
+			fire.pivot_offset = Vector2(25, 50)
+			b.add_child(fire)
+			# 하트처럼 둥실둥실 + 살랑살랑 흔들림
+			var ft: Tween = fire.create_tween().set_loops()
+			ft.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			ft.tween_property(fire, "position:y", 5.0, 0.9)
+			ft.parallel().tween_property(fire, "rotation", 0.05, 0.9)
+			ft.parallel().tween_property(fire, "scale", Vector2(1.03, 1.03), 0.9)
+			ft.tween_property(fire, "position:y", 11.0, 0.9)
+			ft.parallel().tween_property(fire, "rotation", -0.05, 0.9)
+			ft.parallel().tween_property(fire, "scale", Vector2(0.98, 0.98), 0.9)
+	var pic := TextureRect.new()
+	pic.texture = _centered_tex(_dog_tex(id, 2))
+	pic.custom_minimum_size = Vector2(0, 120)
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	pic.mouse_filter = MOUSE_FILTER_IGNORE
+	box.add_child(pic)
+	# 고른 애와의 관계
+	if ref != "" and ref != id:
+		var tags := HBoxContainer.new()
+		tags.alignment = BoxContainer.ALIGNMENT_CENTER
+		tags.add_theme_constant_override("separation", 3)
+		tags.mouse_filter = MOUSE_FILTER_IGNORE
+		if GameState.is_sworn(ref, id):
+			tags.add_child(_tag("의형제", Color(0.9, 0.7, 0.18)))
+		if GameState.is_couple(ref, id):
+			tags.add_child(_tag("커플", PINK))
+		if GameData.is_trusted(ref, id):
+			tags.add_child(_tag("신뢰", Color(0.3, 0.56, 0.78)))
+		if GameData.is_family(ref, id):
+			tags.add_child(_tag("가족", Color(0.78, 0.56, 0.3)))
+		if GameData.is_rival(ref, id):
+			tags.add_child(_tag("앙숙", Color(0.56, 0.54, 0.53)))
+		if GameState.is_sulky(ref, id):
+			tags.add_child(_tag("토라짐", CLOVER_COL))
+		for t in tags.get_children():
+			(t as Control).mouse_filter = MOUSE_FILTER_IGNORE
+		if tags.get_child_count() > 0:
+			box.add_child(tags)
+	var nm := _label(GameData.DOGS[id]["name"], 24)
+	nm.mouse_filter = MOUSE_FILTER_IGNORE
+	box.add_child(nm)
+	box.add_child(_rank_panel(id, false))
+	return b
+
+
+## 그림을 모양만 남기고 회색 한 색으로 칠하는 재질 (눈코입 안 보임)
+var _sil_mat: ShaderMaterial
+
+
+func _silhouette_mat() -> ShaderMaterial:
+	if _sil_mat == null:
+		var sh := Shader.new()
+		sh.code = """shader_type canvas_item;
+uniform vec4 tint : source_color = vec4(0.78, 0.76, 0.74, 1.0);
+void fragment() {
+	COLOR = vec4(tint.rgb, texture(TEXTURE, UV).a * tint.a);
+}"""
+		_sil_mat = ShaderMaterial.new()
+		_sil_mat.shader = sh
+	return _sil_mat
+
+
+## 출전할 수 있는 멍냥이 (어른)
+func _mini_ok(id: String) -> bool:
+	return GameState.owns(id) and GameState.get_puppy(id).is_adult()
+
+
+func _mini_set_role(role: String) -> void:
+	_mini_role = role
+	_mini_refresh_pick()
+
+
+func _mini_set_fac(fid: String) -> void:
+	_mini_fac = fid
+	_mini_refresh_pick()
+
+
+var _mini_tapped := ""
+
+
+## 목록이 다시 그려진 뒤 방금 누른 카드만 살짝 출렁
+func _mini_soft_jelly(card: Control) -> void:
+	await get_tree().process_frame
+	if is_instance_valid(card):
+		_jelly(card, 0.3)
+
+
+func _mini_select(id: String) -> void:
+	_mini_tapped = id
+	if GameData.is_strategist(id):
+		_mini_strat = "" if _mini_strat == id else id
+	else:
+		_mini_war = "" if _mini_war == id else id
+		if _mini_war != "" and _mini_strat == "":
+			_mini_role = "strat"      # 무장 골랐으면 책사 탭으로
+	_mini_refresh_pick()
+
+
+func _mini_refresh_pick() -> void:
+	# 출전 칸: 고른 애 / 없으면 그림자
+	for role in ["war", "strat"]:
+		var id: String = _mini_war if role == "war" else _mini_strat
+		var pic: TextureRect = _mini_slots[role]["pic"]
+		var nm: Label = _mini_slots[role]["name"]
+		if id != "":
+			pic.texture = _centered_tex(_dog_tex(id, 2))
+			pic.modulate = Color.WHITE
+			pic.material = null
+			nm.text = GameData.DOGS[id]["name"]
+		else:
+			# 빈 칸: 조운(무장) / 가후(책사) 모양의 회색 단색 실루엣
+			pic.texture = _centered_tex(_dog_tex("zhao_yun" if role == "war" else "jia_xu", 2))
+			pic.modulate = Color.WHITE
+			pic.material = _silhouette_mat()
+			nm.text = "무장" if role == "war" else "책사"
+	# 탭 색
+	for key in _mini_tabs:
+		var t: Button = _mini_tabs[key]
+		var on: bool = key == _mini_role or key == _mini_fac
+		var col: Color = FACTION_COLORS[key] if FACTION_COLORS.has(key) else Color(0.86, 0.52, 0.32)
+		if on:
+			t.add_theme_stylebox_override("normal", _box(col, 16))
+			t.add_theme_stylebox_override("hover", _box(col.lightened(0.08), 16))
+			for k in ["font_color", "font_hover_color", "font_focus_color"]:
+				t.add_theme_color_override(k, Color.WHITE)
+		else:
+			t.add_theme_stylebox_override("normal", _card_box(Color(1, 0.98, 0.94), col.lightened(0.3), 3))
+			t.add_theme_stylebox_override("hover", _card_box(Color(1, 0.96, 0.9), col, 3))
+			for k in ["font_color", "font_hover_color", "font_focus_color"]:
+				t.add_theme_color_override(k, col.darkened(0.15))
+	# 목록
+	for c in _mini_list.get_children():
+		_mini_list.remove_child(c)
+		c.queue_free()
+	var ids: Array[String] = []
+	for id in GameState.owned:
+		if _mini_ok(id) and GameData.faction_of(id) == _mini_fac \
+				and GameData.is_strategist(id) == (_mini_role == "strat"):
+			ids.append(id)
+	if ids.is_empty():
+		var none := _label("어른까지 키운 %s가 없어요" % ("책사" if _mini_role == "strat" else "무장"), 22)
+		none.add_theme_color_override("font_color", SUB_COLOR)
+		_mini_list.add_child(none)
+	else:
+		# 관계 태그 기준: 한 마리만 골랐으면 그 애, 둘 다 골랐으면 지금 탭의 짝꿍
+		var ref := ""
+		if _mini_war != "" and _mini_strat != "":
+			ref = _mini_war if _mini_role == "strat" else _mini_strat
+		else:
+			ref = _mini_war if _mini_war != "" else _mini_strat
+		var grid := _grid(_mini_list)
+		for id in ids:
+			var pc := _mini_pick_card(id, ref)
+			grid.add_child(pc)
+			if id == _mini_tapped:
+				_mini_soft_jelly(pc)
+		_mini_tapped = ""
+	# 출전 버튼 / 보너스
+	_mini_go.disabled = _mini_war == "" or _mini_strat == ""
+	_mini_show_bonus()
+
+
+## 보너스 줄: [관계 태그] 보너스! 효과   (관계 색 글씨, 하나씩 뿅)
+func _mini_show_bonus() -> void:
+	var key := "%s|%s" % [_mini_war, _mini_strat]
+	if key == _mini_bonus_key:
+		return
+	_mini_bonus_key = key
+	for c in _mini_bonus_box.get_children():
+		_mini_bonus_box.remove_child(c)
+		c.queue_free()
+	if _mini_war == "" or _mini_strat == "":
+		return
+	var rows: Array = _mini_bonus(_mini_war, _mini_strat)["rows"]
+	for i in rows.size():
+		var r: Array = rows[i]
+		var line := HBoxContainer.new()
+		line.alignment = BoxContainer.ALIGNMENT_CENTER
+		line.add_theme_constant_override("separation", 10)
+		_mini_bonus_box.add_child(line)
+		var wish: bool = r.size() > 4 and r[4] == "wish"
+		if not wish:
+			var tag := _tag(r[0], r[1])
+			tag.add_theme_font_size_override("font_size", _fs(24))
+			line.add_child(tag)
+		var txt := _label(r[2] if wish else "%s %s" % ["보너스!" if r[3] else "주의!", r[2]], 24 if wish else 30)
+		if wish:
+			txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			txt.custom_minimum_size = Vector2(600, 0)
+		txt.add_theme_color_override("font_color", (r[1] as Color).darkened(0.12))
+		txt.add_theme_color_override("font_outline_color", Color(1, 1, 1))
+		txt.add_theme_constant_override("outline_size", 6)
+		line.add_child(txt)
+		# 뿅! (차례로)
+		line.modulate.a = 0.0
+		var tw := create_tween()
+		tw.tween_interval(0.05 + 0.12 * i)
+		tw.tween_callback(func() -> void:
+			line.pivot_offset = line.size / 2
+			line.scale = Vector2(0.75, 0.75)
+			line.modulate.a = 1.0)
+		tw.tween_property(line, "scale", Vector2(1.05, 1.05), 0.14).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		tw.tween_property(line, "scale", Vector2.ONE, 0.1)
+
+
+## 관계 보너스. rows = [[태그, 색, 효과, 좋은지]] (기본 스탯은 안 보여 줌)
+func _mini_bonus(w: String, s: String) -> Dictionary:
+	var b := {"peek": 1, "duel": true, "double": false, "redraw": false, "extra": 0, "rows": []}
+	var rows: Array = b["rows"]
+	if GameData.is_trusted(w, s):
+		b["peek"] = 2
+		rows.append(["신뢰", Color(0.3, 0.56, 0.78), "간파 +1", true])
+	if GameState.is_sworn(w, s):
+		b["double"] = true
+		rows.append(["의형제", Color(0.9, 0.7, 0.18), "협공 (첫 승리 2점)", true])
+	if GameState.is_couple(w, s):
+		b["redraw"] = true
+		rows.append(["커플", PINK, "응원 (손패 다시 받기)", true])
+	var fw: String = GameData.faction_of(w)
+	if fw == GameData.faction_of(s):
+		b["extra"] = 1
+		rows.append(["같은 진영", FACTION_COLORS[fw], "손패 +1", true])
+	if GameData.is_rival(w, s):
+		b["duel"] = false
+		rows.append(["앙숙", Color(0.56, 0.54, 0.53), "일기토 못 써요", false])
+	# 스페셜 칭호 짝꿍이면 맨 위에 빨간 글씨 (횟수는 안 알려 줌)
+	if not GameData.special_for(w, s).is_empty():
+		rows.push_front(["", Color(0.85, 0.2, 0.22),
+			"%s 강아지는 %s 고양이와 함께 싸우고 싶어해요!" % [GameData.DOGS[w]["name"], GameData.DOGS[s]["name"]], true, "wish"])
+	return b
+
+
+func _mini_deal(n: int) -> Array:
+	var hand: Array = []
+	for i in n:
+		hand.append(["cav", "arc", "spr"].pick_random())
+	return hand
+
+
+## 상대가 이번 판에 낼 카드
+func _mini_foe_card() -> String:
+	var st: Dictionary = GameData.MINI_STAGES[_mini_stage]
+	var plain: Array = []
+	for c in _mb["hand"]:
+		if c != "fire":
+			plain.append(c)
+	if not plain.is_empty() and randf() < float(st["smart"]):
+		var target: String = plain.pick_random()
+		for k in GameData.CARD_BEATS:
+			if GameData.CARD_BEATS[k] == target:
+				return k
+	var w: Array = st["w"]
+	var total: float = w[0] + w[1] + w[2]
+	var r := randf() * total
+	for i in 3:
+		r -= float(w[i])
+		if r < 0.0:
+			return ["cav", "arc", "spr"][i]
+	return "spr"
+
+
+func _mini_start() -> void:
+	if _mini_war == "" or _mini_strat == "":
+		return
+	var bonus := _mini_bonus(_mini_war, _mini_strat)
+	var st: Dictionary = GameData.MINI_STAGES[_mini_stage]
+	var hand := _mini_deal(GameData.MINI_HAND + int(bonus["extra"]))
+	if not st.get("no_fire", false):
+		hand.append("fire")
+	_mb = {"hand": hand, "me": 0, "foe": int(st.get("head", 0)), "round": 1, "peek": bonus["peek"], "duel": bonus["duel"],
+		"armed": false, "double": bonus["double"], "redraw": bonus["redraw"], "foe_card": "", "seen": false, "over": false,
+		"busy": false}
+	_mb["foe_card"] = _mini_foe_card()
+	_log("대전 시작: %s + %s / %d단계" % [_mini_war, _mini_strat, _mini_stage + 1])
+	_mini_battle_page()
+
+
+func _mini_battle_page() -> void:
+	var st: Dictionary = GameData.MINI_STAGES[_mini_stage]
+	var v := _new_page()
+	v.add_theme_constant_override("separation", 8)
+	_page_header(v, "← 포기", _ask_forfeit, st["name"])
+	_mb_ui = {}
+	var score := _label("", 52)
+	v.add_child(score)
+	_mb_ui["score"] = score
+	v.add_child(_mini_gap())
+
+	# ── 위: 상대 진영 ──
+	# 상대 진영: 회색 적 무장 + 적 책사 (화난 얼굴), 이기면 씩 웃음
+	var foe := HBoxContainer.new()
+	foe.alignment = BoxContainer.ALIGNMENT_CENTER
+	foe.add_theme_constant_override("separation", 30)
+	v.add_child(foe)
+	for key in ["foe_war", "foe_strat"]:
+		var ff := TextureRect.new()
+		ff.custom_minimum_size = Vector2(130, 130)
+		ff.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ff.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		ff.mouse_filter = MOUSE_FILTER_IGNORE
+		foe.add_child(ff)
+		_mb_ui[key] = ff
+	_mb_ui["foe"] = foe
+
+	# ── 가운데: 상대 카드 / 내 카드 (+ WIN! 뿅) ──
+	v.add_child(_mini_gap())
+	var mid := Control.new()
+	mid.custom_minimum_size = Vector2(0, MINI_SLOT.y * 2 + 26)
+	v.add_child(mid)
+	for key in ["foe_slot", "my_slot"]:
+		var slot := _mini_card_face("", MINI_SLOT.x, MINI_SLOT.y)
+		slot.set_anchors_preset(PRESET_CENTER_TOP)
+		slot.position = Vector2(-MINI_SLOT.x / 2, 0 if key == "foe_slot" else MINI_SLOT.y + 26)
+		mid.add_child(slot)
+		_mb_ui[key] = slot
+	var pop := Label.new()
+	pop.text = "WIN!"
+	pop.add_theme_font_size_override("font_size", 64)
+	pop.add_theme_color_override("font_color", Color(1.0, 0.84, 0.2))
+	pop.add_theme_color_override("font_outline_color", Color(0.5, 0.28, 0.08))
+	pop.add_theme_constant_override("outline_size", 16)
+	pop.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pop.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	pop.size = Vector2(220, 90)
+	pop.pivot_offset = pop.size / 2
+	pop.mouse_filter = MOUSE_FILTER_IGNORE
+	pop.hide()
+	mid.add_child(pop)
+	_mb_ui["pop"] = pop
+
+	# ── 아래: 우리 진영 (무장 + 책사) ──
+	v.add_child(_mini_gap())
+	var team := HBoxContainer.new()
+	team.alignment = BoxContainer.ALIGNMENT_CENTER
+	team.add_theme_constant_override("separation", 40)
+	v.add_child(team)
+	for key in ["war", "strat"]:
+		var face := TextureRect.new()
+		face.custom_minimum_size = Vector2(190, 190)
+		face.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		face.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		team.add_child(face)
+		_mb_ui[key] = face
+	var result := _label("낼 카드를 골라 주세요!", 28)
+	result.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(result)
+	_mb_ui["result"] = result
+	var foe_hint := _label("", 22)
+	foe_hint.add_theme_color_override("font_color", SUB_COLOR)
+	v.add_child(foe_hint)
+	_mb_ui["foe_hint"] = foe_hint
+
+	v.add_child(_mini_gap())
+	# 스킬
+	var skills := HBoxContainer.new()
+	skills.alignment = BoxContainer.ALIGNMENT_CENTER   # 쓴 버튼은 사라지고 남은 것끼리 가운데로
+	skills.custom_minimum_size = Vector2(0, 76)        # 다 써도 자리 높이는 그대로
+	skills.add_theme_constant_override("separation", 10)
+	v.add_child(skills)
+	for sk in [["peek", "간파"], ["duel", "일기토"], ["redraw", "응원"]]:
+		var b := _button(sk[1], _mini_skill.bind(sk[0]))
+		b.custom_minimum_size = Vector2(190, 76)
+		b.add_theme_font_size_override("font_size", _fs(24))
+		skills.add_child(b)
+		_mb_ui["sk_" + sk[0]] = b
+	# 손패
+	var hand := HBoxContainer.new()
+	hand.alignment = BoxContainer.ALIGNMENT_CENTER
+	hand.add_theme_constant_override("separation", 6)
+	v.add_child(hand)
+	_mb_ui["hand"] = hand
+	_mb["busy"] = false
+	_mini_faces("open")
+	_mini_reset_slots()
+	_mini_refresh()
+
+
+const MINI_SLOT := Vector2(150, 180)   # 가운데 카드 자리 크기
+const MINI_HAND_H := 165.0             # 손패 카드 높이
+
+
+## 위아래로 고르게 벌려 주는 빈칸
+func _mini_gap() -> Control:
+	var g := Control.new()
+	g.size_flags_vertical = SIZE_EXPAND_FILL
+	return g
+
+
+## 카드 한 장 모양 (kind "" = 빈칸, "?" = 회색 ???). 그림 + 이름
+func _mini_card_face(kind: String, w: float, h: float) -> PanelContainer:
+	var card := PanelContainer.new()
+	card.custom_minimum_size = Vector2(w, h)
+	card.size = Vector2(w, h)
+	card.pivot_offset = Vector2(w, h) / 2
+	card.mouse_filter = MOUSE_FILTER_IGNORE
+	var box := VBoxContainer.new()
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_theme_constant_override("separation", int(h * 0.08))   # 그림과 이름 사이 띄우기
+	box.mouse_filter = MOUSE_FILTER_IGNORE
+	card.add_child(box)
+	var icon = RpsIconScript.new()
+	icon.custom_minimum_size = Vector2(1, 1) * minf(w * 0.68, h * 0.5)
+	box.add_child(icon)
+	var nm := _label("", 22)
+	nm.mouse_filter = MOUSE_FILTER_IGNORE
+	box.add_child(nm)
+	card.set_meta("big", h >= 175.0)
+	card.set_meta("icon", icon)
+	card.set_meta("name", nm)
+	_mini_set_card(card, kind)
+	return card
+
+
+func _mini_set_card(card: PanelContainer, kind: String) -> void:
+	var icon = card.get_meta("icon")   # RpsIcon (kind 속성 있음)
+	var nm: Label = card.get_meta("name")
+	if kind == "" or kind == "?":
+		icon.hide()
+		nm.text = "???" if kind == "?" else ""
+		nm.add_theme_font_size_override("font_size", 34)
+		nm.add_theme_color_override("font_color", Color(1, 1, 1, 0.9))
+		var col := Color(0.66, 0.64, 0.62) if kind == "?" else Color(0, 0, 0, 0.06)
+		card.add_theme_stylebox_override("panel", _box(col, 16))
+		return
+	icon.show()
+	icon.kind = kind
+	nm.text = GameData.CARD_NAMES[kind]
+	nm.add_theme_font_size_override("font_size", _fs(28 if card.get_meta("big", false) else 22))
+	nm.add_theme_color_override("font_color", TEXT_COLOR)
+	card.add_theme_stylebox_override("panel", _card_box(Color(1, 0.98, 0.94), CARD_COLORS[kind], 5))
+
+
+func _mini_reset_slots() -> void:
+	_mini_set_card(_mb_ui["foe_slot"], "?")
+	_mini_set_card(_mb_ui["my_slot"], "")
+	(_mb_ui["pop"] as Label).hide()
+
+
+func _mini_faces(eyes: String) -> void:
+	(_mb_ui["war"] as TextureRect).texture = _dog_tex(_mini_war, 2, eyes)
+	(_mb_ui["strat"] as TextureRect).texture = _dog_tex(_mini_strat, 2, eyes)
+	# 적: 내가 지면(line) 씩 웃고, 나머지는 화난 얼굴
+	var sfx := "_squint" if eyes == "line" else ""
+	(_mb_ui["foe_war"] as TextureRect).texture = _centered_tex(FoodIcon.item_texture("enemy_war" + sfx))
+	(_mb_ui["foe_strat"] as TextureRect).texture = _centered_tex(FoodIcon.item_texture("enemy_strat" + sfx))
+
+
+func _mini_refresh() -> void:
+	var st: Dictionary = GameData.MINI_STAGES[_mini_stage]
+	(_mb_ui["score"] as Label).text = "나 %d : %d %s" % [_mb["me"], _mb["foe"], st["enemy"]]
+	var hint := "%d번째 판" % _mb["round"]
+	if _mb["armed"]:
+		hint += " · 일기토 준비!"
+	if st["tie_enemy"]:
+		hint += " · 비기면 상대 승리"
+	if st.get("no_fire", false):
+		hint += " · 화공이 막혔어요"
+	if int(st.get("head", 0)) > 0 and _mb["round"] == 1:
+		hint += " · 상대가 %d점 먼저!" % int(st["head"])
+	(_mb_ui["foe_hint"] as Label).text = hint
+	var lock: bool = _mb["over"] or _mb["busy"]
+	(_mb_ui["sk_peek"] as Button).text = "간파 %d" % _mb["peek"]
+	(_mb_ui["sk_peek"] as Button).disabled = lock or _mb["peek"] <= 0 or _mb["seen"]
+	(_mb_ui["sk_duel"] as Button).disabled = lock or not _mb["duel"]
+	(_mb_ui["sk_redraw"] as Button).disabled = lock or not _mb["redraw"]
+	# 다 쓴 (못 쓰는) 보너스 버튼은 숨김 → 남은 버튼끼리 가운데 정렬
+	# (대전 튜토리얼 중에는 설명하려고 다 보여 줌)
+	var tut_on := _btut_step >= 0
+	(_mb_ui["sk_peek"] as Button).visible = tut_on or int(_mb["peek"]) > 0
+	(_mb_ui["sk_duel"] as Button).visible = tut_on or bool(_mb["duel"])
+	(_mb_ui["sk_redraw"] as Button).visible = tut_on or bool(_mb["redraw"])
+	# 간파했으면 상대 카드가 살짝 비쳐 보임
+	if not _mb["busy"]:
+		if _mb["seen"]:
+			_mini_set_card(_mb_ui["foe_slot"], _mb["foe_card"])
+			(_mb_ui["foe_slot"] as Control).modulate = Color(1, 1, 1, 0.6)
+		else:
+			_mini_set_card(_mb_ui["foe_slot"], "?")
+			(_mb_ui["foe_slot"] as Control).modulate = Color.WHITE
+	var hand_box: HBoxContainer = _mb_ui["hand"]
+	for c in hand_box.get_children():
+		hand_box.remove_child(c)
+		c.queue_free()
+	var n := (_mb["hand"] as Array).size()
+	var w := minf(150.0, (660.0 - 6.0 * (n - 1)) / maxf(1.0, n))
+	for i in n:
+		var card: String = _mb["hand"][i]
+		var b := Button.new()
+		b.custom_minimum_size = Vector2(w, MINI_HAND_H)
+		b.focus_mode = Control.FOCUS_NONE
+		var col: Color = CARD_COLORS[card]
+		b.add_theme_stylebox_override("normal", _card_box(Color(1, 0.98, 0.94), col, 5))
+		b.add_theme_stylebox_override("hover", _card_box(Color(1, 0.95, 0.88), col, 5))
+		b.add_theme_stylebox_override("pressed", _card_box(Color(0.98, 0.9, 0.8), col, 5))
+		b.add_theme_stylebox_override("disabled", _card_box(Color(0.9, 0.88, 0.85), col.lightened(0.4), 5))
+		b.disabled = lock
+		if _mb.get("tut", false) and _mb["round"] == 1 and card != "fire" \
+				and GameData.CARD_BEATS.get(card, "") != _mb["foe_card"]:
+			b.disabled = true   # 튜토리얼 첫 판: 이기는 카드만
+		b.pressed.connect(_mini_play.bind(i))
+		var face := _mini_card_face(card, w, MINI_HAND_H)
+		face.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+		face.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+		b.add_child(face)
+		hand_box.add_child(b)
+
+
+func _mini_skill(kind: String) -> void:
+	if _mb.is_empty() or _mb["over"] or _mb["busy"]:
+		return
+	match kind:
+		"peek":
+			if _mb["peek"] > 0 and not _mb["seen"]:
+				_mb["peek"] -= 1
+				_mb["seen"] = true
+				_btut_event.call_deferred("peek")
+				(_mb_ui["result"] as Label).text = "%s의 간파! 상대의 수가 보여요." % GameData.DOGS[_mini_strat]["name"]
+		"duel":
+			if _mb["duel"]:
+				_mb["duel"] = false
+				_mb["armed"] = true
+				(_mb_ui["result"] as Label).text = "%s, 일기토 준비! 이번 판은 비겨도 이겨요." % GameData.DOGS[_mini_war]["name"]
+		"redraw":
+			if _mb["redraw"]:
+				_mb["redraw"] = false
+				var hand: Array = _mb["hand"]
+				var fire := hand.has("fire")
+				var n := hand.size() - (1 if fire else 0)
+				var fresh := _mini_deal(n)
+				if fire:
+					fresh.append("fire")
+				_mb["hand"] = fresh
+				_mb["foe_card"] = _mini_foe_card()
+				_mb["seen"] = false
+				(_mb_ui["result"] as Label).text = "응원 받아서 손패를 다시 받았어요!"
+	_mini_refresh()
+
+
+## 카드 내기: 내 카드 등장 → 상대 카드 뒤집힘 → 이긴 쪽에 WIN! 뿅 → 점수
+func _mini_play(i: int) -> void:
+	if _mb.is_empty() or _mb["over"] or _mb["busy"]:
+		return
+	var st: Dictionary = GameData.MINI_STAGES[_mini_stage]
+	var hand: Array = _mb["hand"]
+	var mine: String = hand[i]
+	hand.remove_at(i)
+	var foe: String = _mb["foe_card"]
+	if _mb.get("tut", false) and mine != "fire" and GameData.CARD_BEATS.get(mine, "") != foe:
+		foe = GameData.CARD_BEATS[mine]   # 튜토리얼: 무조건 이기게
+		_mb["foe_card"] = foe
+	_mb["busy"] = true
+	_mini_refresh()
+	_btut_event("card")
+	var my_slot: PanelContainer = _mb_ui["my_slot"]
+	var foe_slot: PanelContainer = _mb_ui["foe_slot"]
+	# 1) 내 카드 등장
+	_mini_set_card(my_slot, mine)
+	_mini_pop_in(my_slot)
+	await get_tree().create_timer(0.35).timeout
+	if not is_instance_valid(foe_slot):
+		return
+	# 2) 상대 카드 뒤집기
+	foe_slot.modulate = Color.WHITE
+	_mini_set_card(foe_slot, foe)
+	_mini_pop_in(foe_slot)
+	await get_tree().create_timer(0.3).timeout
+	if not is_instance_valid(foe_slot):
+		return
+	# 3) 판정
+	var res := "tie"
+	if mine == "fire" or GameData.CARD_BEATS.get(mine, "") == foe:
+		res = "win"
+	elif mine != foe:
+		res = "lose"
+	var duel_used := false
+	if res == "tie":
+		if _mb["armed"]:
+			res = "win"
+			duel_used = true
+		elif st["tie_enemy"]:
+			res = "lose"
+	_mb["armed"] = false
+	var line := "%s vs %s → " % [GameData.CARD_NAMES[mine], GameData.CARD_NAMES[foe]]
+	match res:
+		"win":
+			var pts := 1
+			if _mb["double"]:
+				_mb["double"] = false
+				pts = 2
+				line += "의형제 협공! 2점!"
+			elif duel_used:
+				line += "일기토 승리!"
+			elif mine == "fire":
+				line += "화공으로 불바다!"
+			else:
+				line += "이겼어요!"
+			_mb["me"] += pts
+			_mini_faces("squint")
+			_mini_win_pop("WIN!" if pts == 1 else "WIN! ×2", my_slot)
+		"lose":
+			_mb["foe"] += 1
+			line += "졌어요.." if mine != foe else "비겼지만 상대가 가져갔어요.."
+			_mini_faces("line")
+			_mini_win_pop("WIN!", foe_slot)
+		_:
+			line += "비겼어요"
+			_mini_faces("open")
+			_mini_win_pop("DRAW", null)
+	(_mb_ui["result"] as Label).text = line
+	_mb["round"] += 1
+	_mb["seen"] = false
+	var done: bool = _mb["me"] >= GameData.MINI_WIN or _mb["foe"] >= GameData.MINI_WIN or hand.is_empty()
+	if done:
+		_mb["over"] = true
+	_mini_refresh_score_only()
+	await get_tree().create_timer(1.1).timeout
+	if not is_instance_valid(foe_slot):
+		return
+	if done:
+		if _mb.get("tut", false):
+			_btut_finish()
+		else:
+			_mini_end(_mb["me"] > _mb["foe"])
+		return
+	_mb["foe_card"] = _mini_foe_card()
+	_mb["busy"] = false
+	_mini_reset_slots()
+	_mini_faces("open")
+	_mini_refresh()
+	_btut_event("play")
+
+
+func _mini_refresh_score_only() -> void:
+	var st: Dictionary = GameData.MINI_STAGES[_mini_stage]
+	var score: Label = _mb_ui["score"]
+	score.text = "나 %d : %d %s" % [_mb["me"], _mb["foe"], st["enemy"]]
+	score.pivot_offset = score.size / 2
+	var tw := create_tween()
+	tw.tween_property(score, "scale", Vector2(1.15, 1.15), 0.08)
+	tw.tween_property(score, "scale", Vector2.ONE, 0.12)
+
+
+## 카드가 톡 튀어나오는 연출
+func _mini_pop_in(c: Control) -> void:
+	c.pivot_offset = c.size / 2
+	c.scale = Vector2(0.4, 0.4)
+	var tw := create_tween()
+	tw.tween_property(c, "scale", Vector2(1.1, 1.1), 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(c, "scale", Vector2.ONE, 0.08)
+
+
+## 노란 WIN! 이 이긴 쪽 카드 옆에서 뿅 (비기면 가운데 DRAW)
+func _mini_win_pop(text: String, beside: Control) -> void:
+	var pop: Label = _mb_ui["pop"]
+	var mid: Control = pop.get_parent()
+	pop.text = text
+	pop.add_theme_color_override("font_color", Color(1.0, 0.84, 0.2) if text != "DRAW" else Color(0.85, 0.83, 0.8))
+	var center := mid.size / 2     # 비기면 두 카드 사이 가운데
+	if beside:
+		center = beside.position + beside.size / 2   # 이긴 쪽 카드 위에
+	pop.position = center - pop.size / 2
+	pop.rotation = -0.12
+	pop.scale = Vector2(0.2, 0.2)
+	pop.modulate.a = 1.0
+	pop.show()
+	var tw := create_tween()
+	tw.tween_property(pop, "scale", Vector2(1.25, 1.25), 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(pop, "scale", Vector2.ONE, 0.1)
+	tw.tween_interval(0.6)
+	tw.tween_property(pop, "modulate:a", 0.0, 0.25)
+
+
+# ── 대전 튜토리얼: 어른 무장+책사가 처음 생기면 (뽑기권 선물 다음) 1단계를 같이 해 봄. 마지막엔 꼭 이김 ──
+var _btut_step := -1
+var _btut_wait := ""
+
+
+## 조건이 되면 대전 튜토리얼 시작 (시작했으면 true)
+func _btut_check() -> bool:
+	if _btut_step >= 0 or _tut_step >= 0 or not GameState.tutorial_done:
+		return false
+	if GameState.battle_tut_done or not GameState.battle_ready():
+		return false
+	_btut_start()
+	return true
+
+
+func _btut_start() -> void:
+	_log("대전 튜토리얼 시작")
+	# 출전: 가장 먼저 어른이 된 무장 1 + 가장 먼저 어른이 된 책사 1
+	# (어른 선물 받은 순서 = rewarded 에 들어간 순서. 혹시 없으면 데려온 순서)
+	_mini_war = ""
+	_mini_strat = ""
+	var order: Array[String] = []
+	for id in GameState.rewarded:
+		order.append(str(id))
+	order.append_array(GameState.owned)
+	for id in order:
+		if not _mini_ok(id):
+			continue
+		if GameData.is_strategist(id):
+			if _mini_strat == "":
+				_mini_strat = id
+		elif _mini_war == "":
+			_mini_war = id
+	_mini_stage = 0
+	_mini_start()
+	_mb["tut"] = true
+	_mb["peek"] = maxi(1, int(_mb["peek"]))
+	# 첫 판: 상대는 궁병(가위) → 기병(바위)로 이기면 됨. 손패에 기병 꼭 넣기
+	_mb["foe_card"] = "arc"
+	if not (_mb["hand"] as Array).has("cav"):
+		_mb["hand"][0] = "cav"
+	_mini_refresh()
+	_btut_step = -1
+	_btut_next()
+
+
+func _btut_next() -> void:
+	_btut_step += 1
+	_btut_wait = ""
+	match _btut_step:
+		0:
+			tut.show_step("대전이 열렸어요!\n무장 1마리와 책사 1마리가 함께 싸워요.", [], false)
+		1:
+			tut.show_step("카드는 가위바위보예요!\n기병(바위) > 궁병(가위) > 창병(보) > 기병\n화공(불)은 무조건 이겨요.", [_mb_ui["hand"]], false)
+		2:
+			tut.show_step("상대 카드는 내가 카드를 낼 때까지\n??? 로 가려져 있어요.", [_mb_ui["foe_slot"]], false)
+		3:
+			_btut_wait = "peek"
+			tut.show_step("책사의 간파로 상대 카드를 미리 볼 수 있어요.\n눌러 보세요!", [_mb_ui["sk_peek"]], true)
+		4:
+			_btut_wait = "play"
+			# 손패 + 카드 내는 곳까지 밝게 (WIN! 이 잘 보이게)
+			tut.show_step("상대는 %s을(를) 낼 거예요.\n이기는 카드를 내 보세요!" % GameData.CARD_NAMES[_mb["foe_card"]],
+				[_mb_ui["hand"], _mb_ui["foe_slot"], _mb_ui["my_slot"]], true)
+		5:
+			tut.show_step("이기면 점수가 올라가요.\n먼저 3번 이기면 승리!", [_mb_ui["score"]], false)
+		6:
+			tut.show_step("일기토는 비겨도 이기게 해 주고, 응원은 손패를 다시 받아요.\n신뢰·의형제·커플 사이면 보너스도 있어요!", [_mb_ui["sk_duel"], _mb_ui["sk_redraw"]], false)
+		7:
+			_btut_wait = "card"
+			tut.show_step("다음 판도 이겨 보아요!", [_mb_ui["hand"], _mb_ui["foe_slot"], _mb_ui["my_slot"]], true)
+		_:
+			tut.finish()   # 카드를 고르면 안내는 사라지고 끝까지 직접
+
+
+func _btut_event(what: String) -> void:
+	if _btut_step >= 0 and _btut_wait == what:
+		_btut_next()
+
+
+## 튜토리얼 대전이 끝남: 보상 없이 안내만
+func _btut_finish() -> void:
+	tut.finish()
+	_btut_wait = ""
+	_open_overlay("승리!", "전공을 쌓아\n최고의 영웅 멍냥이가 되어 보아요!", "btut_end")
+	_overlay_pair(_mini_war, _mini_strat, "squint")
+	confirm_button.text = "좋았어!"
+	confirm_button.show()
+	celebration.play("", "", get_viewport_rect().size / 2 - celebration.global_position)
+
+
+## 대전 도중 포기 → 확인창 (끝난 판이면 바로 나감)
+func _ask_forfeit() -> void:
+	if _mb.is_empty() or _mb.get("over", false):
+		_show_mini()
+		return
+	_open_overlay("포기", "정말 포기하시겠습니까?\n공적을 놓치게 됩니다!", "forfeit")
+	var red := Color(0.86, 0.32, 0.32)
+	confirm_button.text = "포기하기"
+	confirm_button.add_theme_stylebox_override("normal", _box(red, 18))
+	confirm_button.add_theme_stylebox_override("hover", _box(red.lightened(0.1), 18))
+	confirm_button.add_theme_stylebox_override("pressed", _box(red.darkened(0.15), 18))
+	confirm_button.show()
+	cancel_button.text = "계속 싸우기"
+	cancel_button.show()
+
+
+func _mini_end(won: bool) -> void:
+	var st: Dictionary = GameData.MINI_STAGES[_mini_stage]
+	var got: Dictionary = GameState.mini_result(won, _mini_stage, _mini_war, _mini_strat)
+	_log("대전 결과: %s" % [got])
+	var text: String
+	if won:
+		text = "첫 클리어 보상!" if got["first"] else "보상"
+	else:
+		text = "%s에게 졌어요.\n다시 도전해 봐요!" % st["enemy"]
+	_open_overlay("승리!" if won else "패배..", text, "mini_end")
+	overlay_log.custom_minimum_size = Vector2(560, 0)
+	if won:
+		_overlay_pair(_mini_war, _mini_strat, "squint")
+	else:
+		_overlay_pair(_mini_war, _mini_strat, "closed", true)
+	# 그림 밑: 이름 + 칭호 + 전공 막대 + "20/170 (+10)"
+	for id in [_mini_war, _mini_strat]:
+		overlay_stats.add_child(_mini_stat(id, int(got["exp"])))
+	overlay_stats.show()
+	# 보상: 종류별 그림 + ×개수 (첫 클리어 보너스 + 보상 뽑기 + 공훈패)
+	if won:
+		var counts := {}
+		var order: Array[String] = []
+		if str(got.get("reward", "")) != "":
+			counts[got["reward"]] = int(got["n"])
+			order.append(str(got["reward"]))
+		for k in ["ticket", "golden_peach", "pouch", "ginseng", "clover", "peach"]:   # 귀한 것 먼저
+			var dn := int((got.get("drops", {}) as Dictionary).get(k, 0))
+			if dn > 0:
+				if not counts.has(k):
+					order.append(k)
+				counts[k] = int(counts.get(k, 0)) + dn
+		if int(got.get("merit", 0)) > 0:
+			counts["merit"] = int(got["merit"])
+			order.append("merit")
+		drops_box.add_theme_constant_override("separation", 14)
+		for k in order:
+			var cell := VBoxContainer.new()
+			cell.add_theme_constant_override("separation", 0)
+			var t := TextureRect.new()
+			var icon_id: String = "ticket" if k == "ticket" else ("item_merit" if k == "merit" else str(GameData.ITEMS[k]["icon"]))
+			t.texture = FoodIcon.item_texture(icon_id)
+			t.custom_minimum_size = Vector2(72, 72)
+			t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			cell.add_child(t)
+			var cl := _label("×%d" % int(counts[k]), 22)
+			cl.add_theme_color_override("font_color", SUB_COLOR)
+			cell.add_child(cl)
+			drops_box.add_child(cell)
+		drops_box.show()
+	# 새 칭호 / 스페셜 칭호 (얻었을 때만)
+	overlay_extra.add_theme_constant_override("separation", 14)
+	var before: Dictionary = got.get("before", {})
+	for id in got["ranked"]:
+		var nm: String = GameData.DOGS[id]["name"]
+		var old_lv := int(before.get(id, 0))
+		var new_lv := GameState.rank_of(id)
+		var new_name: String = GameData.rank_name(id, new_lv)
+		var parts: Array = []
+		if old_lv <= 0:
+			parts = ["%s%s " % [nm, _ig(nm)], _rank_tag(id, 24, new_lv), " 칭호를 얻었어요!"]
+		else:
+			parts = ["%s의 칭호가 " % nm, _rank_tag(id, 24, old_lv), "에서 ", _rank_tag(id, 24, new_lv), "%s 되었어요!" % _ig(new_name)]
+		overlay_extra.add_child(_inline_row(parts))
+	if got.get("special", "") != "":
+		overlay_extra.add_child(_inline_row(["스페셜 칭호 ", _special_tag(got["special"], 24), " 획득!"]))
+	for gname in got.get("groups", []):
+		overlay_extra.add_child(_inline_row(["단체 칭호 ", _group_tag(gname, 24), " 달성!"]))
+	if overlay_extra.get_child_count() > 0:
+		overlay_extra.show()
+	confirm_button.show()
+	if won:
+		celebration.play("", "", get_viewport_rect().size / 2 - celebration.global_position)   # 글자 없이 폭죽만
+
+
+## 글씨와 꼬리표를 한 줄에 (가운데 정렬)
+func _inline_row(parts: Array) -> Control:
+	var row := HFlowContainer.new()
+	row.alignment = FlowContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("h_separation", 0)
+	row.add_theme_constant_override("v_separation", 8)
+	row.custom_minimum_size = Vector2(560, 0)
+	row.mouse_filter = MOUSE_FILTER_IGNORE
+	for p in parts:
+		if p is String:
+			var l := _label(p, 26)
+			l.mouse_filter = MOUSE_FILTER_IGNORE
+			row.add_child(l)
+		elif p is Control:
+			row.add_child(p)
+	return row
+
+
+## 대전 결과 그림 밑 작은 상태: 칭호 + 막대 + "20/170 (+10)"
+func _mini_stat(id: String, gain: int) -> Control:
+	var rp: Dictionary = GameState.rank_progress(id)
+	var lv := int(rp["lv"])
+	var col: Color = GameData.rank_bar_color(id, lv)
+	var box := VBoxContainer.new()
+	box.custom_minimum_size = Vector2(220, 0)
+	box.add_theme_constant_override("separation", 4)
+	box.mouse_filter = MOUSE_FILTER_IGNORE
+	var tag := _rank_tag(id, 18)
+	if tag:
+		var c := CenterContainer.new()
+		c.mouse_filter = MOUSE_FILTER_IGNORE
+		c.add_child(tag)
+		box.add_child(c)
+	else:
+		var none := _label("칭호 없음", 18)
+		none.add_theme_color_override("font_color", SUB_COLOR)
+		box.add_child(none)
+	var bar := ProgressBar.new()
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(170, 10)
+	bar.size_flags_horizontal = SIZE_SHRINK_CENTER
+	bar.mouse_filter = MOUSE_FILTER_IGNORE
+	bar.add_theme_stylebox_override("background", _box(_bar_bg(col, lv), 6))
+	bar.add_theme_stylebox_override("fill", _box(col.darkened(0.05), 6))
+	var num: Label
+	if int(rp["next"]) < 0:
+		bar.max_value = 1
+		bar.value = 1
+		num = _label("최고 칭호 (+%d)" % gain, 18)
+	else:
+		bar.max_value = int(rp["next"]) - int(rp["prev"])
+		bar.value = int(rp["exp"]) - int(rp["prev"])
+		num = _label("%d/%d (+%d)" % [int(rp["exp"]) - int(rp["prev"]), int(rp["next"]) - int(rp["prev"]), gain], 18)
+	num.add_theme_color_override("font_color", SUB_COLOR)
+	box.add_child(bar)
+	box.add_child(num)
+	return box
 
 
 # ═════════════════════════ 오버레이 ═════════════════════════
@@ -1943,7 +4351,55 @@ func _build_overlay() -> void:
 	overlay_image.size_flags_horizontal = SIZE_SHRINK_CENTER
 	overlay_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	overlay_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	v.add_child(overlay_image)
+	# 그림 두 장 나란히 (대전 결과에서 둘이 같이)
+	var pics := HBoxContainer.new()
+	pics.alignment = BoxContainer.ALIGNMENT_CENTER
+	pics.add_theme_constant_override("separation", 10)
+	v.add_child(pics)
+	pics.add_child(overlay_image)
+	overlay_image2 = TextureRect.new()
+	overlay_image2.custom_minimum_size = Vector2(220, 220)
+	overlay_image2.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	overlay_image2.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	overlay_image2.hide()
+	pics.add_child(overlay_image2)
+	overlay_image3 = TextureRect.new()   # 이야기 장면: 최대 3마리
+	overlay_image3.custom_minimum_size = Vector2(220, 220)
+	overlay_image3.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	overlay_image3.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	overlay_image3.hide()
+	pics.add_child(overlay_image3)
+	for img in [overlay_image, overlay_image2, overlay_image3]:
+		var tears := Control.new()      # ㅠㅠ 눈물 (필요할 때만)
+		tears.mouse_filter = MOUSE_FILTER_IGNORE
+		tears.set_anchors_preset(PRESET_FULL_RECT)
+		tears.draw.connect(_draw_tears.bind(tears))
+		tears.hide()
+		img.add_child(tears)
+		_tear_marks.append(tears)
+		# 화남 표시 💢 (그림 오른쪽 위, 필요할 때만)
+		var anger := Control.new()
+		anger.mouse_filter = MOUSE_FILTER_IGNORE
+		anger.set_anchors_preset(PRESET_FULL_RECT)
+		anger.draw.connect(func() -> void:
+			var sz := anger.size
+			_draw_anger(anger, Vector2(sz.x * 0.8, sz.y * 0.2), minf(sz.x, sz.y) * 0.1))
+		anger.hide()
+		img.add_child(anger)
+		_anger_marks.append(anger)
+	_anger_mark = _anger_marks[0]
+	_glow = Control.new()   # 그림 뒤에서 빙글빙글 도는 빛 (두루마리 장면)
+	_glow.mouse_filter = MOUSE_FILTER_IGNORE
+	_glow.set_anchors_preset(PRESET_FULL_RECT)
+	_glow.show_behind_parent = true
+	_glow.draw.connect(_draw_glow)
+	_glow.hide()
+	overlay_image.add_child(_glow)
+	overlay_stats = HBoxContainer.new()
+	overlay_stats.alignment = BoxContainer.ALIGNMENT_CENTER
+	overlay_stats.add_theme_constant_override("separation", 10)
+	overlay_stats.hide()
+	v.add_child(overlay_stats)
 	overlay_log = _label("", 28)
 	overlay_log.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	overlay_log.custom_minimum_size = Vector2(560, 120)
@@ -1954,6 +4410,10 @@ func _build_overlay() -> void:
 	drops_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	drops_box.add_theme_constant_override("separation", 4)
 	v.add_child(drops_box)
+
+	overlay_extra = VBoxContainer.new()   # 그때그때 덧붙이는 칸 (도감: 칭호·전공)
+	overlay_extra.hide()
+	v.add_child(overlay_extra)
 
 	strategy_box = HBoxContainer.new()
 	strategy_box.add_theme_constant_override("separation", 12)
@@ -2001,11 +4461,16 @@ func _build_panel_overlay(list_size: Vector2) -> Array:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_fat_scrollbar(scroll)   # 넘치면 오른쪽에 잡기 쉬운 굵은 막대
 	outer.add_child(scroll)
+	# 오른쪽에 스크롤 막대 자리를 비워 둠 (막대가 버튼을 가리지 않게)
+	var pad := MarginContainer.new()
+	pad.size_flags_horizontal = SIZE_EXPAND_FILL
+	pad.add_theme_constant_override("margin_right", int(REL_BAR_W) + 10)
+	scroll.add_child(pad)
 	var list := VBoxContainer.new()
 	list.size_flags_horizontal = SIZE_EXPAND_FILL
 	list.add_theme_constant_override("separation", 10)
-	scroll.add_child(list)
-	_drag_scroll(scroll, list)
+	pad.add_child(list)
+	_drag_scroll(scroll, pad)
 	var close := _button("닫기", func() -> void:
 		root.hide()
 		_refresh())
@@ -2029,11 +4494,19 @@ func _card_row() -> PanelContainer:
 
 
 func _open_overlay(title: String, text: String, mode: String) -> void:
+	_stop_glow()
 	_overlay_mode = mode
 	overlay_title.text = title
 	overlay_log.text = text
 	overlay_log.show()
 	overlay_image.hide()
+	overlay_image2.hide()
+	overlay_image3.hide()
+	for img in [overlay_image, overlay_image2, overlay_image3]:
+		img.custom_minimum_size = Vector2(220, 220)
+		img.material = null
+	for t in _tear_marks + _anger_marks:
+		t.hide()
 	overlay_image.scale = Vector2.ONE
 	overlay_image.rotation = 0.0
 	strategy_box.hide()
@@ -2042,9 +4515,18 @@ func _open_overlay(title: String, text: String, mode: String) -> void:
 	for key in ["normal", "hover", "pressed"]:
 		confirm_button.remove_theme_stylebox_override(key)
 	cancel_button.hide()
+	cancel_button.text = "취소"
 	drops_box.hide()
+	drops_box.add_theme_constant_override("separation", 4)
 	for c in drops_box.get_children():
 		c.queue_free()
+	overlay_extra.hide()
+	for c in overlay_extra.get_children():
+		c.queue_free()
+	overlay_stats.hide()
+	for c in overlay_stats.get_children():
+		c.queue_free()
+	overlay_log.custom_minimum_size = Vector2(560, 120)
 	overlay.move_to_front()
 	celebration.move_to_front()
 	overlay.show()
@@ -2062,6 +4544,28 @@ func _on_overlay_confirm() -> void:
 			return
 		"reset_confirm":
 			_do_reset()
+			return
+		"breakup_confirm":
+			_do_breakup()
+			return
+		"mini_end":
+			_show_mini()
+			return
+		"forfeit":
+			_show_mini()
+			return
+		"btut_end":
+			GameState.battle_tut_done = true
+			GameState.save_now()
+			_btut_step = -1
+			_show_mini()
+			return
+		"gift":
+			_set_busy(false)
+			if _story_check() or _btut_check():
+				return
+		"story":
+			_story_next()
 			return
 	_set_busy(false)
 	if _overlay_mode == "battle":
@@ -2199,7 +4703,7 @@ func _button(text: String, callback: Callable) -> Button:
 
 
 ## 누르는 순간 보잉! 젤리처럼 찌그러졌다 튕기며 돌아옴
-func _jelly(c: Control) -> void:
+func _jelly(c: Control, k := JELLY) -> void:
 	if not is_instance_valid(c):
 		return
 	c.pivot_offset = c.size / 2
@@ -2209,8 +4713,7 @@ func _jelly(c: Control) -> void:
 			old.kill()
 	var tw := c.create_tween()
 	c.set_meta("jelly", tw)
-	# 출렁임 세기: JELLY 를 키우면 더 보잉, 줄이면 더 얌전
-	var k := JELLY
+	# 출렁임 세기: k(기본 JELLY) 를 키우면 더 보잉, 줄이면 더 얌전
 	tw.tween_property(c, "scale", Vector2(1.0 + 0.12 * k, 1.0 - 0.14 * k), 0.06).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	tw.tween_property(c, "scale", Vector2(1.0 - 0.06 * k, 1.0 + 0.07 * k), 0.08).set_trans(Tween.TRANS_SINE)
 	tw.tween_property(c, "scale", Vector2.ONE, 0.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
