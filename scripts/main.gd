@@ -203,17 +203,35 @@ func _page_header(v: VBoxContainer, back_text: String, back_cb: Callable, title:
 	header.add_child(spacer)
 
 
+## 스크롤 목록: 오른쪽 굵은 막대 + 카드(버튼) 위에서 끌어도 스크롤됨
 func _scroll_list(v: VBoxContainer) -> VBoxContainer:
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER   # 모바일: 바 없이 손가락으로 스크롤
+	_fat_scrollbar(scroll)
 	v.add_child(scroll)
+	var pad := MarginContainer.new()
+	pad.size_flags_horizontal = SIZE_EXPAND_FILL
+	pad.add_theme_constant_override("margin_right", int(REL_BAR_W) + 10)
+	scroll.add_child(pad)
 	var list := VBoxContainer.new()
 	list.size_flags_horizontal = SIZE_EXPAND_FILL
 	list.add_theme_constant_override("separation", 16)
-	scroll.add_child(list)
+	pad.add_child(list)
+	_drag_scroll(scroll, pad)
+	# 안에 들어오는 버튼(카드)도 끌기를 막지 않게: 입력을 위로 넘김
+	list.child_entered_tree.connect(_pass_buttons)
 	return list
+
+
+## 목록 안의 버튼들이 끌기 입력을 부모(스크롤)로 넘기게
+func _pass_buttons(node: Node) -> void:
+	if node is BaseButton:
+		(node as Control).mouse_filter = MOUSE_FILTER_PASS
+	for c in node.get_children():
+		_pass_buttons(c)
+	if not node.child_entered_tree.is_connected(_pass_buttons):
+		node.child_entered_tree.connect(_pass_buttons)
 
 
 func _grid(list: VBoxContainer) -> GridContainer:
@@ -3395,7 +3413,9 @@ func _mini_pick_card(id: String, ref: String) -> Button:
 	b.add_theme_stylebox_override("normal", _card_box(bg, edge, 7 if on else 4))
 	b.add_theme_stylebox_override("hover", _card_box(bg.darkened(0.03), edge, 7 if on else 4))
 	b.add_theme_stylebox_override("pressed", _card_box(bg.darkened(0.08), edge, 7 if on else 4))
-	b.pressed.connect(_mini_select.bind(id))
+	b.pressed.connect(func() -> void:
+		if Time.get_ticks_msec() - _scroll_drag_ms >= 300:   # 끌어서 스크롤한 직후엔 무시
+			_mini_select(id))
 	var box := VBoxContainer.new()
 	box.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
 	box.offset_top = 8
@@ -4660,6 +4680,9 @@ func _fat_scrollbar(sc: ScrollContainer) -> void:
 		bar.add_theme_stylebox_override(st, g)
 
 
+var _scroll_drag_ms := -10000   # 마지막으로 목록을 끌어 스크롤한 시각
+
+
 ## 손가락으로 끌어서 스크롤 (엔진 기본 터치 스크롤이 웹에서 안 먹을 때 대비). 버튼 위가 아닌 곳을 끌면 됨
 func _drag_scroll(sc: ScrollContainer, content: Control) -> void:
 	content.mouse_filter = MOUSE_FILTER_PASS
@@ -4669,7 +4692,10 @@ func _drag_scroll(sc: ScrollContainer, content: Control) -> void:
 			st["from"] = e.global_position if e.pressed else Vector2.INF
 			st["at"] = sc.scroll_vertical
 		elif e is InputEventMouseMotion and st["from"] != Vector2.INF and (e.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0:
-			sc.scroll_vertical = int(st["at"]) - int(e.global_position.y - (st["from"] as Vector2).y)
+			var dy: float = e.global_position.y - (st["from"] as Vector2).y
+			if absf(dy) > 12.0:
+				_scroll_drag_ms = Time.get_ticks_msec()   # 끌었으면 손 뗄 때 버튼이 눌리지 않게
+			sc.scroll_vertical = int(st["at"]) - int(dy)
 			content.accept_event())
 
 
@@ -4707,7 +4733,10 @@ func _fs(font_size: int) -> int:
 func _button(text: String, callback: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
-	b.pressed.connect(callback)
+	b.pressed.connect(func() -> void:
+		if Time.get_ticks_msec() - _scroll_drag_ms < 300:   # 목록을 끌어서 스크롤한 직후면 누른 걸로 치지 않음
+			return
+		callback.call())
 	b.button_down.connect(_jelly.bind(b))
 	return b
 
