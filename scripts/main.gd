@@ -2995,7 +2995,7 @@ func _rec_stories(head: VBoxContainer, list: VBoxContainer) -> void:
 			faces = b["faces"]
 			hint = "%s · 공훈패 %d" % [_mask_names(str(b["cond"]), b["faces"]), GameData.SPECIAL_STORY_COST]
 			if not _story_seen(id) and not _sp_after_ok(id):
-				hint = "앞 이야기를 먼저 끝까지 봐요 · " + hint
+				hint = _sp_after_text(id)
 		else:
 			title = _story_book(id)["title"]
 			faces = [id] if id != GameData.CHOHAN_STORY else ["liu_bang", "xiang_yu"]
@@ -3179,6 +3179,20 @@ func _sp_after(id: String) -> Array:
 	return []
 
 
+## 아직 안 본 앞 이야기들: 주인공 이름으로 ("손견·원술 이야기")
+func _sp_after_text(id: String) -> String:
+	var parts: Array[String] = []
+	for a in _sp_after(id):
+		if GameState.story_seen(str(a)):
+			continue
+		var b := _sp_book(str(a))
+		var names: Array[String] = []
+		for f in b.get("faces", []):
+			names.append(_rec_name(str(f)))
+		parts.append("·".join(PackedStringArray(names)))
+	return "먼저 볼 이야기: " + ", ".join(PackedStringArray(parts))
+
+
 func _sp_after_ok(id: String) -> bool:
 	for a in _sp_after(id):
 		if not GameState.story_seen(str(a)):
@@ -3268,7 +3282,7 @@ func _sp_card(id: String) -> Control:
 	info.add_child(title)
 	var cond_text := _mask_names(str(book["cond"]), book["faces"])
 	if not seen and not _sp_after_ok(id):
-		cond_text = "앞 이야기를 먼저 끝까지 봐요 · " + cond_text
+		cond_text = _sp_after_text(id)
 	var cond := _label(("★ " if ok_ or seen else "") + cond_text, 18)
 	cond.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	cond.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -3282,7 +3296,7 @@ func _sp_card(id: String) -> Control:
 	else:
 		var block := ""
 		if not _sp_after_ok(id):
-			block = "앞 이야기를 먼저 봐요"
+			block = "앞 이야기 먼저!"
 		elif not ok_:
 			block = "조건을 채워요"
 		elif GameState.merits < cost:

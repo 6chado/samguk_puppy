@@ -1,7 +1,7 @@
 extends RefCounted
 ## 스페셜 이야기 원고 (tools 없이 직접 고쳐도 됨). 해금: adult 멍냥이 모두 어른 + 공훈패
 
-const ORDER: Array[String] = ["sp_pangtong", "sp_xushu", "sp_weiyan", "sp_dingjun", "sp_zhugebro", "sp_machao", "sp_xiahoudun", "sp_guojia", "sp_jiaxu", "sp_guandu", "sp_chengong", "sp_xuhuang", "sp_shangxiang", "sp_arrows", "sp_kurou", "sp_dongfeng", "sp_hefei", "sp_ganning", "sp_zhoutai", "sp_taishici", "sp_baiyi", "sp_sunjian", "sp_seal", "sp_baima", "sp_wenyang", "sp_hongmen", "sp_hanxin", "sp_weishui", "sp_zhonglimo", "sp_simian", "sp_wujiang", "sp_yingbu", "sp_caocan", "sp_luzhi", "sp_jiangwei", "sp_duanjin", "sp_xiongjie", "sp_yiling", "sp_luofeng", "sp_langzhong", "sp_emptybox", "sp_tusi", "sp_xiapi", "sp_wuchao", "sp_dingjunshadow", "sp_qianli", "sp_flood", "sp_maicheng", "sp_wuzhang", "sp_shulast", "sp_huarong", "sp_simawait", "sp_simayan"]
+const ORDER: Array[String] = ["sp_pangtong", "sp_xushu", "sp_weiyan", "sp_dingjun", "sp_zhugebro", "sp_machao", "sp_xiahoudun", "sp_dingjunshadow", "sp_guojia", "sp_jiaxu", "sp_guandu", "sp_wuchao", "sp_chengong", "sp_xiapi", "sp_xuhuang", "sp_shangxiang", "sp_arrows", "sp_kurou", "sp_dongfeng", "sp_hefei", "sp_ganning", "sp_zhoutai", "sp_taishici", "sp_baiyi", "sp_sunjian", "sp_seal", "sp_duanjin", "sp_xiongjie", "sp_yiling", "sp_baima", "sp_wenyang", "sp_hongmen", "sp_hanxin", "sp_simian", "sp_tusi", "sp_wujiang", "sp_weishui", "sp_zhonglimo", "sp_yingbu", "sp_caocan", "sp_luzhi", "sp_jiangwei", "sp_luofeng", "sp_langzhong", "sp_emptybox", "sp_qianli", "sp_flood", "sp_huarong", "sp_maicheng", "sp_wuzhang", "sp_shulast", "sp_simawait", "sp_simayan"]
 
 const BOOKS := {
 	"sp_pangtong": {"title": "반나절 만에?!", "adult": ["pang_tong", "zhang_fei"], "pages": [
