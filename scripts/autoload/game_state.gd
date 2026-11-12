@@ -644,7 +644,7 @@ func _apply(d: Dictionary) -> void:
 	# 진영 옮긴 기록 (주군·앙숙 판정에 쓰여서 맨 먼저)
 	stories.clear()
 	for k in _arr(d.get("stories", [])):
-		if GameData.DOGS.has(str(k)):
+		if GameData.DOGS.has(str(k)) or str(k).begins_with("sp_"):   # 멍냥이 이야기 + 스페셜 이야기
 			stories[str(k)] = true
 	defected.clear()
 	for k in _arr(d.get("defected", [])):

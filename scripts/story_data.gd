@@ -1,7 +1,7 @@
 extends RefCounted
 ## 스페셜 이야기 원고 (tools 없이 직접 고쳐도 됨). 해금: adult 멍냥이 모두 어른 + 공훈패
 
-const ORDER: Array[String] = ["sp_pangtong", "sp_xushu", "sp_weiyan", "sp_dingjun", "sp_zhugebro", "sp_machao", "sp_xiahoudun", "sp_guojia", "sp_jiaxu", "sp_guandu", "sp_chengong", "sp_flood", "sp_xuhuang", "sp_shangxiang", "sp_kurou", "sp_arrows", "sp_hefei", "sp_ganning", "sp_zhoutai", "sp_taishici", "sp_baiyi", "sp_sunjian", "sp_seal", "sp_baima", "sp_wenyang", "sp_simayan", "sp_hongmen", "sp_hanxin", "sp_weishui", "sp_zhonglimo", "sp_simian", "sp_yingbu", "sp_caocan", "sp_luzhi"]
+const ORDER: Array[String] = ["sp_pangtong", "sp_xushu", "sp_weiyan", "sp_dingjun", "sp_zhugebro", "sp_machao", "sp_xiahoudun", "sp_guojia", "sp_jiaxu", "sp_guandu", "sp_chengong", "sp_xuhuang", "sp_shangxiang", "sp_arrows", "sp_kurou", "sp_dongfeng", "sp_hefei", "sp_ganning", "sp_zhoutai", "sp_taishici", "sp_baiyi", "sp_sunjian", "sp_seal", "sp_baima", "sp_wenyang", "sp_hongmen", "sp_hanxin", "sp_weishui", "sp_zhonglimo", "sp_simian", "sp_wujiang", "sp_yingbu", "sp_caocan", "sp_luzhi", "sp_jiangwei", "sp_duanjin", "sp_xiongjie", "sp_yiling", "sp_luofeng", "sp_langzhong", "sp_emptybox", "sp_tusi", "sp_xiapi", "sp_wuchao", "sp_dingjunshadow", "sp_qianli", "sp_flood", "sp_maicheng", "sp_wuzhang", "sp_shulast", "sp_huarong", "sp_simawait", "sp_simayan"]
 
 const BOOKS := {
 	"sp_pangtong": {"title": "반나절 만에?!", "adult": ["pang_tong", "zhang_fei"], "pages": [
@@ -64,13 +64,13 @@ const BOOKS := {
 		{"text": "오소의 식량 창고가 활활!\n원소 군사들의 배에서 꼬르륵 소리가 났어요.", "btn": "꼬르륵", "cast": [["yuan_shao", "closed", "tears"]]},
 		{"text": "조조 강아지의 대역전승이랍니다!", "btn": "만세!", "cast": [["cao_cao", "squint"], ["xun_you", "squint"]], "party": true},
 	]},
-	"sp_chengong": {"title": "의리의 진궁", "adult": ["chen_gong", "cao_cao"], "pages": [
+	"sp_chengong": {"title": "의리의 진궁", "adult": ["chen_gong", "cao_cao"], "after": ["sp_fengyi"], "pages": [
 		{"text": "진궁 고양이가 붙잡힌 조조 강아지의 밧줄을\n날카로운 이빨로 끊어 줬어요.", "btn": "착하다!", "cast": [["chen_gong", "open"], ["cao_cao", "open"]]},
 		{"text": "둘은 꼬리를 나란히 흔들며 함께 도망쳤어요.", "btn": "우정!", "cast": [["chen_gong", "squint"], ["cao_cao", "squint"]]},
 		{"text": "그런데 조조 강아지가 너무 무서운 말을 했어요.\n\"내가 세상을 배신할지언정...\"", "btn": "헉", "cast": [["cao_cao", "half"], ["chen_gong", "open"]]},
 		{"text": "진궁 고양이는 한밤중에 발소리도 없이\n살금살금 떠나 버렸답니다.", "btn": "안녕..", "cast": [["chen_gong", "line"]]},
 	]},
-	"sp_flood": {"title": "물바다", "adult": ["guan_yu", "yu_jin"], "pages": [
+	"sp_flood": {"title": "물바다", "adult": ["guan_yu", "yu_jin"], "after": ["sp_qianli"], "pages": [
 		{"text": "비가 주룩주룩 와서 강물이 넘쳐흘렀어요.", "btn": "비 온다", "cast": [["yu_jin", "half"]]},
 		{"text": "관우 강아지가 앞발로 둑을 쾅! 터뜨렸어요.", "btn": "와아!", "cast": [["guan_yu", "line"]]},
 		{"text": "우금 강아지는 개헤엄을 치며\n둥둥 떠내려가다 항복했어요.", "btn": "어푸어푸", "cast": [["yu_jin", "closed", "tears"]]},
@@ -89,7 +89,7 @@ const BOOKS := {
 		{"text": "결국 둘은 앞발을 포개고\n진짜로 결혼식을 올리게 됩니다.", "btn": "축..하해?", "cast": [["sun_shangxiang", "squint"], ["liu_bei", "squint"]], "party": true},
 		{"text": "주유 고양이는 떨떠름한 기분으로 축가를 불렀지요.", "btn": "랄랄라!", "cast": [["zhou_yu", "line"]]},
 	]},
-	"sp_kurou": {"title": "고육지계", "adult": ["huang_gai", "zhou_yu"], "pages": [
+	"sp_kurou": {"title": "고육지계", "adult": ["huang_gai", "zhou_yu"], "after": ["sp_arrows"], "pages": [
 		{"text": "황개 강아지가 주유 고양이와\n귓속말로 비밀 작전을 짰어요.", "btn": "무슨 작전?", "cast": [["huang_gai", "open"], ["zhou_yu", "half"]]},
 		{"text": "모두가 보는 앞에서 주유 고양이가 날카로운 발톱으로\n황개 강아지의 코를 할퀴었어요. \"깨갱!\"", "btn": "아프겠다..", "cast": [["zhou_yu", "line", "anger"], ["huang_gai", "closed", "tears"]]},
 		{"text": "황개 강아지는 코를 할짝할짝 핥으며\n조조에게 가짜 항복 편지를 보냈어요.", "btn": "두근두근", "cast": [["huang_gai", "half"]]},
@@ -137,7 +137,7 @@ const BOOKS := {
 		{"text": "넷은 꼬리를 꼿꼿이 세우고 우렁차게 짖었어요.\n\"강동의 호랑이 출격!\"", "btn": "와아!", "cast": [["sun_jian", "open"], ["cheng_pu", "open"], ["han_dang", "open"]]},
 		{"text": "이 넷이 오나라의 시작이 되었답니다.", "btn": "멋져!", "cast": [["sun_jian", "squint"], ["cheng_pu", "squint"], ["han_dang", "squint"]], "party": true},
 	]},
-	"sp_seal": {"title": "우물 속 옥새", "adult": ["sun_jian", "yuan_shu"], "pages": [
+	"sp_seal": {"title": "우물 속 옥새", "adult": ["sun_jian", "yuan_shu"], "after": ["sp_sunjian"], "pages": [
 		{"text": "손견 강아지가 우물 속에서 반짝이는 걸 발견했어요.", "btn": "뭐지?", "cast": [["sun_jian", "open"]]},
 		{"text": "앞발로 끙차 건져 보니 바로 황제의 옥새였어요!", "btn": "대박!", "cast": [["sun_jian", "squint"]]},
 		{"text": "원술 강아지가 침을 질질 흘리며 다가왔어요.\n\"그거 나 줘!\"", "btn": "안 돼!", "cast": [["yuan_shu", "squint"], ["sun_jian", "open"]]},
@@ -155,7 +155,7 @@ const BOOKS := {
 		{"text": "사마사 고양이는 너무 놀라 털이 빵! 부풀고\n꼬리가 솔처럼 빵빵해졌어요.", "btn": "깜짝이야!", "cast": [["sima_shi", "open", "anger"]]},
 		{"text": "문앙 강아지는 꼬리를 흔들며 유유히 돌아갔답니다.", "btn": "용감해!", "cast": [["wen_yang", "squint"]], "party": true},
 	]},
-	"sp_simayan": {"title": "할아버지의 꿈", "adult": ["sima_yan", "sima_zhao"], "pages": [
+	"sp_simayan": {"title": "할아버지의 꿈", "adult": ["sima_yan", "sima_zhao"], "after": ["sp_simawait"], "pages": [
 		{"text": "사마의 고양이는 언젠가 천하를\n하나로 만드는 꿈을 꿨어요.", "btn": "멋진 꿈", "cast": [["sima_yi", "half"]]},
 		{"text": "아들 사마소 고양이가 그 꿈을 이어받았어요.", "btn": "이어 간다!", "cast": [["sima_zhao", "line"]]},
 		{"text": "손자 사마염 고양이가\n드디어 천하를 하나로 만들었어요!", "btn": "해냈다!", "cast": [["sima_yan", "squint"]], "party": true},
@@ -167,7 +167,7 @@ const BOOKS := {
 		{"text": "장량 고양이가 꼬리로 신호를 보내자\n번쾌 강아지가 문을 쾅! \"고기 줘!\"", "btn": "번쾌다!", "cast": [["zhang_liang", "half"], ["fan_kuai", "open"]]},
 		{"text": "번쾌 강아지가 고기를 와구와구 먹는 사이,\n유방 강아지는 화장실 간다며 줄행랑쳤답니다.", "btn": "푸하하!", "cast": [["fan_kuai", "squint"], ["liu_bang", "squint"]], "party": true},
 	]},
-	"sp_hanxin": {"title": "다리 밑 한신", "adult": ["han_xin", "xiao_he"], "pages": [
+	"sp_hanxin": {"title": "다리 밑 한신", "adult": ["han_xin", "xiao_he"], "after": ["sp_hongmen"], "pages": [
 		{"text": "동네 불량배가 한신 강아지에게\n\"내 다리 밑으로 기어가!\" 했어요.", "btn": "나빠!", "cast": [["han_xin", "line"]]},
 		{"text": "한신 강아지는 꼬리를 축 내리고 꾹 참으며\n엉금엉금 기어갔어요.", "btn": "참을성..", "cast": [["han_xin", "closed", "tears"]]},
 		{"text": "큰 꿈을 품은 한신 강아지가 밤에 몰래 떠나자,\n소하 고양이가 달밤에 수염을 휘날리며 쫓아왔어요!", "btn": "잡아라!", "cast": [["xiao_he", "line"], ["han_xin", "open"]]},
@@ -185,7 +185,7 @@ const BOOKS := {
 		{"text": "둘은 이불 속에서 꼬리를 맞대고\n옛날 얘기를 하며 소곤소곤.", "btn": "소곤소곤", "cast": [["han_xin", "squint"], ["zhongli_mo", "squint"]]},
 		{"text": "진영은 달라도 친구는 친구랍니다!", "btn": "우정!", "cast": [["han_xin", "squint"], ["zhongli_mo", "squint"]], "party": true},
 	]},
-	"sp_simian": {"title": "사면초가", "adult": ["xiang_yu", "yu_ji"], "pages": [
+	"sp_simian": {"title": "사면초가", "adult": ["xiang_yu", "yu_ji"], "after": ["sp_hanxin"], "pages": [
 		{"text": "밤이 되자 사방에서 초나라 노래가 들려왔어요.", "btn": "무슨 소리?", "cast": [["xiang_yu", "open"]]},
 		{"text": "\"고향 친구들이 다 저쪽으로 갔나 봐..\"\n항우 강아지의 귀가 축 처졌어요.", "btn": "힘내..", "cast": [["xiang_yu", "closed", "tears"]]},
 		{"text": "우희 고양이가 곁에 와서 꼬리로 살며시 감싸고\n노래를 불러 줬어요.", "btn": "예쁜 목소리", "cast": [["yu_ji", "squint"], ["xiang_yu", "half"]]},
@@ -209,5 +209,139 @@ const BOOKS := {
 		{"text": "그때 뒤에서 여치 고양이가 나타났어요..!", "btn": "헉!", "cast": [["lu_zhi", "line", "anger"], ["liu_bang", "open"]]},
 		{"text": "퍽! 말랑한 젤리가 달린 앞발로 냥냥펀치!", "btn": "아야!", "cast": [["lu_zhi", "line", "anger"], ["liu_bang", "closed", "tears"]]},
 		{"text": "유방 강아지는 그 뒤로 여치 고양이만 바라보기로\n앞발 걸고 약속했답니다.", "btn": "큭큭큭!", "cast": [["liu_bang", "squint"], ["lu_zhi", "squint"]], "party": true},
+	]},
+	"sp_jiangwei": {"title": "천수의 인연", "adult": ["jiang_wei", "zhuge_liang"], "pages": [
+		{"text": "천수성의 젊은 장수 강유 강아지가\n제갈량 고양이의 작전을 척척 알아맞혔어요.", "btn": "대단해!", "cast": [["jiang_wei", "line"]]},
+		{"text": "제갈량 고양이가 수염을 쓰다듬으며 감탄했어요.\n\"저 아이, 탐난다!\"", "btn": "탐난다!", "cast": [["zhuge_liang", "squint"]]},
+		{"text": "살랑살랑 꾀를 써서\n강유 강아지가 촉나라로 오게 되었어요.", "btn": "어서 와!", "cast": [["jiang_wei", "open"], ["zhuge_liang", "squint"]]},
+		{"text": "제갈량 고양이는 앞발로\n강유 강아지 머리를 쓰다듬으며\n자기 꾀를 전부 가르쳐 주기로 했답니다.", "btn": "스승님!", "cast": [["zhuge_liang", "squint"], ["jiang_wei", "squint"]], "party": true},
+	]},
+	"sp_duanjin": {"title": "쇠도 자르는 우정", "adult": ["sun_ce", "zhou_yu"], "after": ["sp_seal"], "pages": [
+		{"text": "손책 강아지와 주유 고양이는\n같은 해에 태어난 동갑내기였어요.", "btn": "반가워!", "cast": [["sun_ce", "open"], ["zhou_yu", "open"]]},
+		{"text": "주유 고양이는 자기 큰 집을 내어 주며 말했어요.\n\"우리 집에서 같이 살자!\"", "btn": "착하다!", "cast": [["zhou_yu", "squint"], ["sun_ce", "open"]]},
+		{"text": "둘은 꼬리를 나란히 흔들며\n넓은 강동 땅을 바라봤어요.", "btn": "두근두근", "cast": [["sun_ce", "open"], ["zhou_yu", "open"]]},
+		{"text": "손책 강아지가 말했어요.\n\"우리 꼭 천하를 함께 발바닥에 넣자!\"", "btn": "약속!", "cast": [["sun_ce", "squint"], ["zhou_yu", "open"]]},
+		{"text": "주유 고양이는 밝게 웃었어요.", "btn": "그 꿈은...", "cast": [["zhou_yu", "squint"]]},
+	]},
+	"sp_xiongjie": {"title": "형의 부탁", "after": ["sp_duanjin"], "adult": ["sun_ce", "sun_quan", "zhou_yu"], "pages": [
+		{"text": "손책 강아지가 아파서 누워 있었어요.\n귀가 축 처졌지요.", "btn": "괜찮아?", "cast": [["sun_ce", "closed", "tears"]]},
+		{"text": "손책 강아지가 동생 손권 강아지의\n앞발을 꼭 잡았어요.\n\"이제 네가 강동을 지켜 줘.\"", "btn": "형..", "cast": [["sun_ce", "half"], ["sun_quan", "closed", "tears"]]},
+		{"text": "\"밖의 일은 주유에게 물어보렴.\"\n주유 고양이가 귀를 쫑긋하며 고개를 끄덕였어요.", "btn": "든든해", "cast": [["sun_ce", "half"], ["zhou_yu", "open"]]},
+		{"text": "주유 고양이가 꼬리로\n손권 강아지 등을 살포시 감쌌어요.\n\"제가 곁에 있을게요.\"", "btn": "뭉클", "cast": [["zhou_yu", "squint"], ["sun_quan", "half", "tears"]]},
+		{"text": "그날부터 손권 강아지는\n씩씩한 오나라의 주인이 되었답니다.", "btn": "멋져!", "cast": [["sun_quan", "squint"], ["zhou_yu", "squint"]], "party": true},
+	]},
+	"sp_luofeng": {"title": "낙봉파", "adult": ["pang_tong", "liu_bei"], "after": [], "pages": [
+		{"text": "방통 고양이의 말이 다리를 다쳤어요.\n유비 강아지가 아끼는 흰 말을 내주었지요.", "btn": "고마워!", "cast": [["liu_bei", "squint"], ["pang_tong", "open"]]},
+		{"text": "\"이 말을 타고 가렴. 조심해야 해!\"\n유비 강아지가 꼬리를 살랑 흔들었어요.", "btn": "다녀올게!", "cast": [["liu_bei", "squint"], ["pang_tong", "squint"]]},
+		{"text": "그런데 지나는 언덕의 이름은 낙봉파.\n봉황이 떨어지는 언덕이었어요.", "btn": "불길해..", "cast": [["pang_tong", "half"]]},
+		{"text": "저녁 무렵, 흰 말만 혼자\n터벅터벅 돌아왔어요.", "btn": "안 돼..", "cast": [["liu_bei", "open"]]},
+		{"text": "유비 강아지는 흰 말의 갈기에 얼굴을 묻고\n오래오래 울었답니다.", "btn": "방통..", "cast": [["liu_bei", "closed", "tears"]]},
+	]},
+	"sp_maicheng": {"title": "돌아오지 않는 형님", "adult": ["guan_yu", "guan_ping", "zhou_cang"], "after": ["sp_luofeng", "sp_flood"], "pages": [
+		{"text": "형주를 빼앗긴 관우 강아지와 관평 강아지가\n작은 맥성에 갇혔어요.", "btn": "어떡해..", "cast": [["guan_yu", "line"], ["guan_ping", "open"]]},
+		{"text": "\"주창아, 성을 부탁한다.\"\n관우 강아지가 앞발로\n주창 강아지의 머리를 토닥였어요.", "btn": "형님!", "cast": [["guan_yu", "squint"], ["zhou_cang", "closed", "tears"]]},
+		{"text": "관우 강아지와 관평 강아지는\n눈 내리는 밤에 성문을 나섰어요.", "btn": "꼭 돌아와요", "cast": [["guan_yu", "line"], ["guan_ping", "line"]]},
+		{"text": "주창 강아지는 성문 앞에 앉아\n귀를 쫑긋 세우고 기다렸어요.", "btn": "오겠지..", "cast": [["zhou_cang", "open"]]},
+		{"text": "하지만 발소리는 끝내 들리지 않았어요.\n주창 강아지는 꼬리를 바닥에 내려놓았답니다.", "btn": "형님..", "cast": [["zhou_cang", "closed", "tears"]]},
+	]},
+	"sp_wuzhang": {"title": "오장원의 별", "adult": ["zhuge_liang", "jiang_wei"], "after": ["sp_maicheng", "sp_jiangwei"], "pages": [
+		{"text": "오장원의 가을밤,\n제갈량 고양이가 콜록콜록 기침을 했어요.", "btn": "괜찮아요?", "cast": [["zhuge_liang", "closed"], ["jiang_wei", "open"]]},
+		{"text": "\"강유야, 이리 오렴.\"\n제갈량 고양이가 앞발로 두루마리를 건넸어요.", "btn": "스승님..", "cast": [["zhuge_liang", "half"], ["jiang_wei", "closed", "tears"]]},
+		{"text": "\"내 꾀를 모두 적어 두었단다.\n이제 네가 촉을 지켜 주렴.\"", "btn": "네..", "cast": [["zhuge_liang", "squint"], ["jiang_wei", "closed", "tears"]]},
+		{"text": "그날 밤, 하늘의 커다란 별 하나가\n반짝반짝 빛나다 조용히 사라졌어요.", "btn": "별이..", "cast": [["jiang_wei", "open"]]},
+		{"text": "강유 강아지는 꼬리를 축 늘어뜨린 채\n밤새 하늘을 올려다보았답니다.", "btn": "스승님..", "cast": [["jiang_wei", "closed", "tears"]]},
+	]},
+	"sp_langzhong": {"title": "잠든 사이에", "adult": ["zhang_fei", "liu_bei"], "after": ["sp_taoyuan"], "pages": [
+		{"text": "장비 강아지는 형님의 원수를 갚겠다며\n잔뜩 화가 나 있었어요.", "btn": "화났다!", "cast": [["zhang_fei", "line", "anger"]]},
+		{"text": "부하들에게 큰 소리로 왕왕 짖고\n밤늦게까지 술을 마셨지요.", "btn": "그만해..", "cast": [["zhang_fei", "line"]]},
+		{"text": "장비 강아지가 코를 골며 잠든 사이,\n화가 난 부하들이 살금살금 다가왔어요.", "btn": "안 돼!", "cast": [["zhang_fei", "closed"]]},
+		{"text": "다음 날, 소식을 들은 유비 강아지는\n앞발로 얼굴을 감싸고 엉엉 울었어요.", "btn": "장비야..", "cast": [["liu_bei", "closed", "tears"]]},
+		{"text": "복숭아 동산의 약속이 떠올라\n유비 강아지의 귀가 축 처졌답니다.", "btn": "도원결의..", "cast": [["liu_bei", "closed", "tears"]]},
+	]},
+	"sp_emptybox": {"title": "빈 도시락", "adult": ["xun_yu", "cao_cao"], "after": [], "pages": [
+		{"text": "순욱 고양이는 오랫동안\n조조 강아지를 곁에서 도왔어요.", "btn": "든든해", "cast": [["xun_yu", "squint"], ["cao_cao", "squint"]]},
+		{"text": "그런데 조조 강아지가 위공이 되려 하자\n순욱 고양이는 고개를 저었어요.", "btn": "왜?", "cast": [["xun_yu", "line"], ["cao_cao", "open"]]},
+		{"text": "어느 날 조조 강아지가 도시락을 보냈어요.\n열어 보니... 텅 비어 있었어요.", "btn": "텅..", "cast": [["xun_yu", "open"]]},
+		{"text": "순욱 고양이는 빈 도시락을 앞발로 꼭 안고\n조용히 눈을 감았답니다.", "btn": "순욱..", "cast": [["xun_yu", "closed", "tears"]]},
+	]},
+	"sp_tusi": {"title": "토끼를 다 잡으면", "adult": ["han_xin", "xiao_he", "lu_zhi"], "after": ["sp_hanxin"], "pages": [
+		{"text": "한신 강아지는 큰 싸움을 모두 이겨\n천하를 평정했어요.", "btn": "최고야!", "cast": [["han_xin", "squint"]]},
+		{"text": "어느 날 소하 고양이가 찾아왔어요.\n\"궁궐에서 잔치가 열린대. 같이 가자.\"", "btn": "잔치?", "cast": [["xiao_he", "half"], ["han_xin", "open"]]},
+		{"text": "궁궐 안에는 여치 고양이가\n발톱을 세우고 기다리고 있었어요.", "btn": "헉!", "cast": [["lu_zhi", "line", "anger"], ["han_xin", "open"]]},
+		{"text": "\"토끼를 다 잡으면 사냥개는...\"\n한신 강아지의 귀가 축 처졌어요.", "btn": "한신..", "cast": [["han_xin", "closed", "tears"]]},
+		{"text": "소하 고양이는 고개를 돌린 채\n수염만 파르르 떨었답니다.", "btn": "소하..", "cast": [["xiao_he", "closed", "tears"]]},
+	]},
+	"sp_xiapi": {"title": "끝까지 함께", "adult": ["lu_bu", "chen_gong"], "after": ["sp_chengong"], "pages": [
+		{"text": "하비성이 물에 잠기고\n성벽이 하나둘 무너졌어요.", "btn": "위험해!", "cast": [["lu_bu", "open"], ["chen_gong", "open"]]},
+		{"text": "\"진궁, 너는 도망가도 돼.\"\n여포 강아지가 귀를 내리고 말했어요.", "btn": "여포..", "cast": [["lu_bu", "half"], ["chen_gong", "open"]]},
+		{"text": "진궁 고양이는 꼬리를 살랑 흔들며 웃었어요.\n\"끝까지 함께예요.\"", "btn": "진궁..", "cast": [["chen_gong", "squint"], ["lu_bu", "closed", "tears"]]},
+		{"text": "둘은 나란히 앉아\n마지막 노을을 오래오래 바라보았답니다.", "btn": "뭉클", "cast": [["lu_bu", "half"], ["chen_gong", "half"]]},
+	]},
+	"sp_shulast": {"title": "촉의 마지막 불꽃", "adult": ["jiang_wei", "zhong_hui"], "after": ["sp_wuzhang"], "pages": [
+		{"text": "유선 강아지가 항복하고\n촉나라는 문을 닫게 되었어요.", "btn": "안 돼..", "cast": [["liu_shan", "closed", "tears"]]},
+		{"text": "하지만 강유 강아지는 포기하지 않았어요.\n\"스승님과 약속했어!\"", "btn": "힘내!", "cast": [["jiang_wei", "line"]]},
+		{"text": "강유 강아지는 종회 고양이와\n몰래 앞발을 맞잡고\n촉을 되살릴 계획을 세웠어요.", "btn": "두근두근", "cast": [["jiang_wei", "half"], ["zhong_hui", "half"]]},
+		{"text": "하지만 계획은 들키고 말았어요.", "btn": "어떡해!", "cast": [["zhong_hui", "open"], ["jiang_wei", "open"]]},
+		{"text": "\"조금만... 조금만 더 시간이 있었다면...\"\n강유 강아지의 마지막 불꽃이 꺼졌답니다.", "btn": "강유..", "cast": [["jiang_wei", "closed", "tears"]]},
+	]},
+	"sp_wuchao": {"title": "오소의 불길 뒤에", "adult": ["yuan_shao"], "after": ["sp_guandu"], "pages": [
+		{"text": "관도에서 크게 진 원소 강아지가\n텅 빈 진영으로 돌아왔어요.", "btn": "원소..", "cast": [["yuan_shao", "half"]]},
+		{"text": "그 많던 군사들은 다 어디 갔을까요?", "btn": "조용하다..", "cast": [["yuan_shao", "open"]]},
+		{"text": "원소 강아지는 아끼던 깃발 하나를\n입에 꼭 물고 앉았어요.", "btn": "힘내..", "cast": [["yuan_shao", "closed", "tears"]]},
+		{"text": "\"내가 조금만 더 귀를 기울였더라면...\"\n원소 강아지의 꼬리가 축 늘어졌답니다.", "btn": "원소..", "cast": [["yuan_shao", "closed", "tears"]]},
+	]},
+	"sp_dingjunshadow": {"title": "정군산의 그림자", "adult": ["xiahou_yuan", "xiahou_dun"], "after": ["sp_xiahoudun", "sp_dingjun"], "pages": [
+		{"text": "하후연 강아지가 정군산으로 떠났어요.\n\"금방 다녀올게, 형!\"", "btn": "조심해!", "cast": [["xiahou_yuan", "squint"], ["xiahou_dun", "squint"]]},
+		{"text": "하후돈 강아지는 안대를 고쳐 쓰고\n매일 산 쪽을 바라봤어요.", "btn": "기다려..", "cast": [["xiahou_dun", "open"]]},
+		{"text": "어느 날 전령이 헐레벌떡 달려왔어요.\n입에는 하후연 강아지의\n깃털 장식이 물려 있었어요.", "btn": "설마..", "cast": [["xiahou_dun", "open"]]},
+		{"text": "하후돈 강아지는 깃털 장식을 앞발로 꼭 쥐고\n하늘을 향해 길게 울었답니다.", "btn": "아우우..", "cast": [["xiahou_dun", "closed", "tears"]]},
+	]},
+	"sp_dongfeng": {"title": "동남풍이 분다", "adult": ["zhuge_liang", "zhou_yu", "huang_gai"], "after": ["sp_kurou"], "pages": [
+		{"text": "적벽 강 위에 조조 강아지의 배들이\n쇠사슬로 줄줄이 묶여 있었어요.", "btn": "엄청 많아!", "cast": [["cao_cao", "squint"], ["zhou_yu", "line"]]},
+		{"text": "그런데 바람이 거꾸로 불지 뭐예요.\n주유 고양이는 수염이 축 처졌지요.", "btn": "어떡해..", "cast": [["zhou_yu", "half"]]},
+		{"text": "\"걱정 마세요. 바람은 제가 빌려 올게요.\"\n제갈량 고양이가 깃털 부채를 살랑 흔들었어요.", "btn": "정말?!", "cast": [["zhuge_liang", "squint"], ["zhou_yu", "open"]]},
+		{"text": "제단 위에 올라간 제갈량 고양이는\n앞발을 모으고 꼬리를 빙글빙글 돌렸답니다.", "btn": "빙글빙글~", "cast": [["zhuge_liang", "closed"]]},
+		{"text": "휘이잉! 정말로 동남풍이 불어왔어요.\n황개 강아지가 불붙은 배를 몰고 쌩 달려갔지요.", "btn": "출발!", "cast": [["huang_gai", "line"]]},
+		{"text": "활활! 적벽 강이 붉게 물들었어요.\n셋은 꼬리를 높이 들고 만세를 불렀답니다.", "btn": "만세!", "cast": [["zhou_yu", "squint"], ["zhuge_liang", "squint"], ["huang_gai", "squint"]], "party": true},
+	]},
+	"sp_qianli": {"title": "천 리를 달려 형님께", "adult": ["guan_yu", "cao_cao"], "after": ["sp_taoyuan"], "pages": [
+		{"text": "형님과 헤어진 관우 강아지가\n조조 강아지네 집에서 지내게 되었어요.", "btn": "형님은?", "cast": [["guan_yu", "half"], ["cao_cao", "squint"]]},
+		{"text": "조조 강아지는 맛있는 뼈다귀에 비단옷에,\n멋진 적토마까지 선물했어요.", "btn": "우와!", "cast": [["cao_cao", "squint"], ["guan_yu", "open"]]},
+		{"text": "그래도 관우 강아지의 귀는\n늘 형님이 있는 쪽을 향해 있었답니다.", "btn": "형님..", "cast": [["guan_yu", "line"]]},
+		{"text": "어느 날 형님 소식이 들려오자\n관우 강아지는 선물을 모두 두고 길을 나섰어요.", "btn": "가야 해!", "cast": [["guan_yu", "line"]]},
+		{"text": "조조 강아지는 꼬리를 축 내리고 배웅했어요.\n\"잘 가라... 정말 멋진 녀석이야.\"", "btn": "아쉬워..", "cast": [["cao_cao", "half", "tears"]]},
+		{"text": "관우 강아지는 적토마를 타고\n천 리 길을 쉬지 않고 달려\n형님 품에 폭 안겼답니다!", "btn": "형님!", "cast": [["guan_yu", "squint"], ["liu_bei", "squint", "tears"]], "party": true},
+	]},
+	"sp_huarong": {"title": "화용도의 갈림길", "adult": ["guan_yu", "cao_cao"], "after": ["sp_qianli", "sp_dongfeng"], "pages": [
+		{"text": "적벽에서 진 조조 강아지가\n털이 잔뜩 그을린 채 좁은 산길로 도망쳤어요.", "btn": "헥헥..", "cast": [["cao_cao", "closed", "tears"]]},
+		{"text": "\"이제 살았다!\" 하고 꼬리를 흔든 순간,\n길 앞에 관우 강아지가 딱 서 있었어요.", "btn": "헉!", "cast": [["cao_cao", "open"], ["guan_yu", "line"]]},
+		{"text": "조조 강아지가 귀를 납작 내리고 말했어요.\n\"관우야... 예전에 내가 잘해 준 거 기억나?\"", "btn": "기억나?", "cast": [["cao_cao", "half"]]},
+		{"text": "관우 강아지는 앞발을 꾹 쥐고\n한참 동안 아무 말도 하지 않았어요.", "btn": "두근두근", "cast": [["guan_yu", "line"]]},
+		{"text": "그러다 슬쩍 고개를 돌리고\n길을 비켜 주었답니다.", "btn": "보내 주는 거야?", "cast": [["guan_yu", "closed"], ["cao_cao", "open"]]},
+		{"text": "\"고맙다, 관우야!\"\n조조 강아지는 꼬리를 흔들며 후다닥 달려갔지요.", "btn": "의리다!", "cast": [["cao_cao", "squint", "tears"], ["guan_yu", "half"]], "party": true},
+	]},
+	"sp_wujiang": {"title": "오강의 이별", "adult": ["xiang_yu", "yu_ji"], "after": ["sp_simian"], "pages": [
+		{"text": "사면초가의 밤이 지나고\n항우 강아지는 오강 앞에 다다랐어요.", "btn": "강이다..", "cast": [["xiang_yu", "half"]]},
+		{"text": "우희 고양이가 꼬리를 살랑이며\n항우 강아지 앞에서 마지막 춤을 추었어요.", "btn": "사뿐사뿐", "cast": [["yu_ji", "squint"], ["xiang_yu", "half"]]},
+		{"text": "\"대왕님, 저는 여기까지예요.\"\n우희 고양이가 앞발로\n항우 강아지의 볼을 살며시 쓰다듬었어요.", "btn": "우희..", "cast": [["yu_ji", "closed"], ["xiang_yu", "closed", "tears"]]},
+		{"text": "뱃사공이 말했어요.\n\"어서 강을 건너 다시 시작하세요!\"", "btn": "건너자!", "cast": [["xiang_yu", "open"]]},
+		{"text": "하지만 항우 강아지는 고개를 저었어요.\n\"강동의 친구들을 볼 낯이 없구나.\"", "btn": "안 돼..", "cast": [["xiang_yu", "line"]]},
+		{"text": "항우 강아지는 오강의 노을을 바라보며\n마지막으로 길게 울었답니다.", "btn": "패왕..", "cast": [["xiang_yu", "closed", "tears"]]},
+	]},
+	"sp_yiling": {"title": "이릉의 불꽃", "adult": ["sun_quan", "lu_xun"], "after": ["sp_xiongjie"], "pages": [
+		{"text": "형님과 주유 고양이가 떠난 뒤,\n손권 강아지는 혼자 오나라를 지켰어요.", "btn": "힘내..", "cast": [["sun_quan", "half"]]},
+		{"text": "그때 유비 강아지가 엄청난 군사를 몰고\n쳐들어왔어요!", "btn": "큰일이다!", "cast": [["liu_bei", "line", "anger"], ["sun_quan", "open"]]},
+		{"text": "손권 강아지는 젊은 육손 고양이를 불렀어요.\n\"너를 믿는다!\"", "btn": "믿어!", "cast": [["sun_quan", "line"], ["lu_xun", "open"]]},
+		{"text": "육손 고양이는 꾹 참고 기다리다가\n여름 바람이 불자 불화살을 쏘았지요!", "btn": "지금이야!", "cast": [["lu_xun", "line"]]},
+		{"text": "칠백 리 진영이 활활 타고\n오나라는 무사히 지켜졌답니다.", "btn": "이겼다!", "cast": [["lu_xun", "squint"], ["sun_quan", "open"]]},
+		{"text": "손권 강아지는 하늘을 보며 꼬리를 흔들었어요.\n\"형님, 보고 계시죠?\"", "btn": "뭉클", "cast": [["sun_quan", "squint", "tears"], ["lu_xun", "squint"]], "party": true},
+	]},
+	"sp_simawait": {"title": "기다리는 고양이", "adult": ["sima_yi", "sima_shi", "sima_zhao"], "after": ["sp_kongcheng"], "pages": [
+		{"text": "제갈량 고양이가 떠난 뒤에도\n사마의 고양이는 늘 조심조심 지냈어요.", "btn": "조심조심", "cast": [["sima_yi", "half"]]},
+		{"text": "조상 강아지가 힘을 잔뜩 뽐내자\n사마의 고양이는 아픈 척 이불 속에 쏙 숨었어요.", "btn": "콜록콜록!", "cast": [["sima_yi", "closed"]]},
+		{"text": "죽을 먹다가 일부러 수염에 줄줄 흘리기도 했지요.\n\"저 할아버지 고양이, 이제 다 됐네~\"", "btn": "푸하하!", "cast": [["sima_yi", "line"]]},
+		{"text": "하지만 이불 속에서 사마의 고양이의 눈은\n반짝반짝 빛나고 있었답니다.", "btn": "수상해..", "cast": [["sima_yi", "squint"]]},
+		{"text": "조상 강아지가 사냥을 떠난 날,\n사마사·사마소 고양이가 쏙 튀어나왔어요!", "btn": "지금이다!", "cast": [["sima_shi", "line"], ["sima_zhao", "line"]]},
+		{"text": "\"오래 기다린 보람이 있구나.\"\n사마의 고양이가 꼬리를 느긋하게 흔들었어요.", "btn": "대단해!", "cast": [["sima_yi", "squint"], ["sima_shi", "squint"], ["sima_zhao", "squint"]], "party": true},
 	]},
 }

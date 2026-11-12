@@ -743,3 +743,30 @@ func roll_drops(amount: Vector2i) -> Array[String]:
 	for i in randi_range(amount.x, amount.y):
 		result.append(roll_food())
 	return result
+
+
+# ── 진영 일러스트: 멤버를 모두 어른으로 키우면 도감 「그림」 탭에서 볼 수 있음 ──
+## 그림 파일은 res://assets/illust/<id>.png (없으면 "그림 준비 중"으로 보임)
+const ILLUSTS := [
+	{"id": "art_shu", "name": "도원의 꿈", "faction": "shu",
+		"members": ["liu_bei", "guan_yu", "zhang_fei", "zhao_yun", "ma_chao", "huang_zhong", "zhuge_liang", "pang_tong"]},
+	{"id": "art_wei", "name": "패왕의 깃발", "faction": "wei",
+		"members": ["cao_cao", "xiahou_dun", "xiahou_yuan", "dian_wei", "xu_chu", "zhang_liao", "xun_yu", "guo_jia"]},
+	{"id": "art_wu", "name": "강동의 노을", "faction": "wu",
+		"members": ["sun_jian", "sun_ce", "sun_quan", "zhou_yu", "lu_su", "lu_meng", "lu_xun", "gan_ning"]},
+	{"id": "art_jin", "name": "진의 새벽", "faction": "jin",
+		"members": ["sima_yi", "sima_shi", "sima_zhao", "sima_yan", "deng_ai", "zhong_hui", "wen_yang"]},
+	{"id": "art_chohan", "name": "초한쟁패", "faction": "han",
+		"members": ["liu_bang", "han_xin", "zhang_liang", "xiao_he", "fan_kuai", "xiang_yu", "yu_ji"]},
+	{"id": "art_special", "name": "난세의 영웅들", "faction": "special",
+		"members": ["lu_bu", "diao_chan", "chen_gong", "dong_zhuo", "yuan_shao", "yuan_shu", "gongsun_zan", "hua_tuo"]},
+]
+
+## 히든 칭호: 조건은 받기 전까지 비밀
+const HIDDEN_TITLES := [
+	{"id": "all_adult", "name": "왜 이렇게까지 하신거죠..?", "hint": "모든 멍냥이를 어른으로 키웠어요"},
+]
+
+
+func illust_path(id: String) -> String:
+	return "res://assets/illust/%s.png" % id

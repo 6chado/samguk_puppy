@@ -1601,6 +1601,12 @@ func _on_stage_changed(stage: int) -> void:
 		var got: int = GameState.grant_adult_reward(puppy.dog_id)
 		if got > 0:
 			_pending_gift = {"text": "%s %s%s 선물을 물어왔어요!\n\n뽑기권 x%d" % [dog_name, sp, _ig(sp), got]}
+		var extra := _adult_unlock_notes(puppy.dog_id)
+		if extra != "":
+			if _pending_gift.is_empty():
+				_pending_gift = {"text": "%s%s 어른이 되면서..." % [dog_name, _ig(dog_name)] + extra}
+			else:
+				_pending_gift["text"] += extra
 		# 크면 풀리는 앙숙: 화해 알림
 		for other in GameState.owned:
 			var m: String = GameData.grow_out_by(puppy.dog_id, other)
@@ -2476,7 +2482,7 @@ func _story_book(id: String) -> Dictionary:
 
 # ═════════════════════════ 도감: 기록 모아 보기 ═════════════════════════
 ## tab: rank(칭호) / special(스페셜 칭호) / group(단체 칭호) / story(이야기)
-const REC_TABS := [["rank", "칭호"], ["special", "스페셜"], ["group", "단체"], ["story", "이야기"]]
+const REC_TABS := [["rank", "칭호"], ["special", "스페셜"], ["group", "단체"], ["story", "이야기"]]   # 그림 완성되면 ["art", "그림"] 다시 추가
 const STORY_HINTS := {
 	"xiahou_ba": "하후패를 어른까지 키우기",
 	"sima_yi": "사마의를 어른으로 키우고 친밀도 50",
@@ -2532,6 +2538,8 @@ func _show_records(tab: String) -> void:
 			_rec_groups(head, list)
 		"story":
 			_rec_stories(head, list)
+		"art":
+			_rec_arts(head, list)
 
 
 const YELLOW := Color(0.94, 0.7, 0.16)
@@ -2596,6 +2604,8 @@ func _rec_ranks(head: VBoxContainer, list: VBoxContainer) -> void:
 		var eb := int(GameState.battle_exp.get(b, 0))
 		return ea > eb if ea != eb else GameData.DOGS[a]["name"] < GameData.DOGS[b]["name"])
 	_rec_count(head, "칭호 받은 멍냥이 %d마리" % ids.size(), "대전에서 이길수록 전공이 쌓여 칭호가 올라가요")
+	for ht in GameData.HIDDEN_TITLES:
+		list.add_child(_hidden_card(ht))
 	# 단계표
 	for pair in [["무장", GameData.WAR_RANKS, "guan_yu"], ["책사", GameData.STRAT_RANKS, "zhuge_liang"]]:
 		var row := HFlowContainer.new()
@@ -2763,6 +2773,205 @@ func _rec_groups(head: VBoxContainer, list: VBoxContainer) -> void:
 		list.add_child(card)
 
 
+# ── 히든 칭호 ──
+func _hidden_done(id: String) -> bool:
+	match id:
+		"all_adult":
+			for d in GameData.DOGS:
+				if not _adult(d):
+					return false
+			return true
+	return false
+
+
+func _hidden_tag(text: String, px: int) -> Control:
+	var t = GradTagScript.new()
+	t.setup(text, Color(0.42, 0.22, 0.62), Color(0.93, 0.45, 0.66), px)
+	return t
+
+
+func _hidden_card(ht: Dictionary) -> Control:
+	var got := _hidden_done(ht["id"])
+	var card: PanelContainer
+	if got:
+		var fp = FramePanelScript.new()
+		fp.setup(Color(0.42, 0.22, 0.62), Color(0.93, 0.45, 0.66), 18)
+		card = fp
+	else:
+		card = PanelContainer.new()
+		var sb := _box(Color(0.9, 0.87, 0.92), 18)
+		sb.set_content_margin_all(20)
+		card.add_theme_stylebox_override("panel", sb)
+		card.mouse_filter = MOUSE_FILTER_PASS
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 8)
+	card.add_child(col)
+	var cap := _label("히든 칭호", 20)
+	cap.add_theme_color_override("font_color", SUB_COLOR)
+	col.add_child(cap)
+	var top := CenterContainer.new()
+	if got:
+		top.add_child(_hidden_tag(ht["name"], 32))
+	else:
+		var q := _label("???", 32)
+		q.add_theme_color_override("font_color", SUB_COLOR)
+		top.add_child(q)
+	col.add_child(top)
+	var h := _label(str(ht["hint"]) if got else "조건은 비밀이에요", 20)
+	h.add_theme_color_override("font_color", SUB_COLOR)
+	col.add_child(h)
+	return card
+
+
+## 어른이 되면서 새로 얻은 일러스트·히든 칭호 알림 문구
+func _adult_unlock_notes(dog_id: String) -> String:
+	var out := ""
+	for il in GameData.ILLUSTS:
+		if ILLUST_ON and (il["members"] as Array).has(dog_id) and _illust_done(il):   # 그림 완성 전엔 알림 안 뜸
+			out += "\n\n일러스트 「%s」를 얻었어요!\n도감 → 칭호 · 이야기 → 그림에서 볼 수 있어요" % il["name"]
+	for ht in GameData.HIDDEN_TITLES:
+		if _hidden_done(ht["id"]):   # 마지막 한 마리가 어른이 되는 순간 한 번만 뜸
+			out += "\n\n히든 칭호 「%s」를 얻었어요!" % ht["name"]
+	return out
+
+
+# ── 진영 일러스트 ──
+const ILLUST_ON := false   # 그림 다 그리면 true + 위 탭 추가
+func _illust_open(il: Dictionary) -> bool:
+	for m in il["members"]:
+		if not GameData.available(m):
+			return false
+	return true
+
+
+func _illust_done(il: Dictionary) -> bool:
+	for m in il["members"]:
+		if not _adult(m):
+			return false
+	return true
+
+
+func _illust_tex(il: Dictionary) -> Texture2D:
+	var path := GameData.illust_path(il["id"])
+	if ResourceLoader.exists(path):
+		return load(path) as Texture2D
+	return null
+
+
+func _rec_arts(head: VBoxContainer, list: VBoxContainer) -> void:
+	var ils: Array = []
+	for il in GameData.ILLUSTS:
+		if _illust_open(il):
+			ils.append(il)
+	var n := 0
+	for il in ils:
+		if _illust_done(il):
+			n += 1
+	_rec_count(head, "모은 그림 %d / %d" % [n, ils.size()], "멤버를 모두 어른으로 키우면 그림을 얻어요")
+	for il in ils:
+		var got := _illust_done(il)
+		var card: PanelContainer
+		if got:
+			var fp = FramePanelScript.new()
+			fp.setup(YELLOW, YELLOW.lightened(0.4), 18)
+			card = fp
+		else:
+			card = PanelContainer.new()
+			var sb := _box(Color(0.97, 0.93, 0.86), 18)
+			sb.set_content_margin_all(20)
+			card.add_theme_stylebox_override("panel", sb)
+			card.mouse_filter = MOUSE_FILTER_PASS
+		var col := VBoxContainer.new()
+		col.add_theme_constant_override("separation", 12)
+		card.add_child(col)
+		var top := HBoxContainer.new()
+		top.alignment = BoxContainer.ALIGNMENT_CENTER
+		top.add_theme_constant_override("separation", 10)
+		var fname := _label(str({"art_chohan": "초한", "art_special": "군웅"}.get(il["id"], GameData.FACTIONS[il["faction"]]["name"])), 24)
+		fname.add_theme_color_override("font_color", SUB_COLOR)
+		top.add_child(fname)
+		top.add_child(_label(il["name"] if got else "???", 32))
+		var cnt := 0
+		for m in il["members"]:
+			if _adult(m):
+				cnt += 1
+		var cl := _label("%d / %d" % [cnt, (il["members"] as Array).size()], 26)
+		cl.add_theme_color_override("font_color", Color(0.3, 0.6, 0.36) if got else SUB_COLOR)
+		top.add_child(cl)
+		col.add_child(top)
+		if got:   # 얻은 그림: 작게 미리보기 + 눌러서 크게
+			var tex := _illust_tex(il)
+			if tex != null:
+				var pv := TextureRect.new()
+				pv.texture = tex
+				pv.custom_minimum_size = Vector2(0, 420)
+				pv.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+				pv.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+				pv.mouse_filter = MOUSE_FILTER_IGNORE
+				col.add_child(pv)
+			else:
+				var wait := _label("그림 준비 중이에요", 24)
+				wait.add_theme_color_override("font_color", SUB_COLOR)
+				col.add_child(wait)
+			var bb := CenterContainer.new()
+			bb.add_child(_big_small(_small_button("크게 보기", _view_illust.bind(il), "" if tex != null else "준비 중", Color(0.55, 0.45, 0.72))))
+			col.add_child(bb)
+		else:   # 아직: 멤버 얼굴 (4명씩 두 줄)
+			var grid := GridContainer.new()
+			grid.columns = 4
+			grid.add_theme_constant_override("h_separation", 10)
+			grid.add_theme_constant_override("v_separation", 4)
+			var cc := CenterContainer.new()
+			cc.add_child(grid)
+			col.add_child(cc)
+			for m in il["members"]:
+				var mv := VBoxContainer.new()
+				mv.add_theme_constant_override("separation", 0)
+				mv.add_child(_rec_face(m, 96, not _adult(m)))
+				var ml := _label(_rec_name(m), 22)
+				ml.add_theme_color_override("font_color", TEXT_COLOR if _adult(m) else SUB_COLOR)
+				mv.add_child(ml)
+				grid.add_child(mv)
+		list.add_child(card)
+
+
+## 그림 크게 보기: 화면 아무 데나 누르면 닫힘
+func _view_illust(il: Dictionary) -> void:
+	var tex := _illust_tex(il)
+	if tex == null:
+		return
+	var view := Control.new()
+	view.set_anchors_preset(Control.PRESET_FULL_RECT)
+	view.mouse_filter = MOUSE_FILTER_STOP
+	var bg := ColorRect.new()
+	bg.color = Color(0, 0, 0, 0.88)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = MOUSE_FILTER_IGNORE
+	view.add_child(bg)
+	var box := VBoxContainer.new()
+	box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	box.add_theme_constant_override("separation", 16)
+	box.mouse_filter = MOUSE_FILTER_IGNORE
+	view.add_child(box)
+	var tl := _label(il["name"], 34)
+	tl.add_theme_color_override("font_color", Color.WHITE)
+	box.add_child(tl)
+	var pic := TextureRect.new()
+	pic.texture = tex
+	pic.size_flags_vertical = SIZE_EXPAND_FILL
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	pic.mouse_filter = MOUSE_FILTER_IGNORE
+	box.add_child(pic)
+	var hint := _label("화면을 누르면 닫혀요", 22)
+	hint.add_theme_color_override("font_color", Color(1, 1, 1, 0.7))
+	box.add_child(hint)
+	view.gui_input.connect(func(e: InputEvent) -> void:
+		if (e is InputEventMouseButton and e.pressed) or (e is InputEventScreenTouch and e.pressed):
+			view.queue_free())
+	add_child(view)
+
+
 # ── 이야기: 진영 이야기 + 스페셜 이야기 ──
 func _rec_stories(head: VBoxContainer, list: VBoxContainer) -> void:
 	var all: Array = []
@@ -2785,6 +2994,8 @@ func _rec_stories(head: VBoxContainer, list: VBoxContainer) -> void:
 			title = b["title"]
 			faces = b["faces"]
 			hint = "%s · 공훈패 %d" % [_mask_names(str(b["cond"]), b["faces"]), GameData.SPECIAL_STORY_COST]
+			if not _story_seen(id) and not _sp_after_ok(id):
+				hint = "앞 이야기를 먼저 끝까지 봐요 · " + hint
 		else:
 			title = _story_book(id)["title"]
 			faces = [id] if id != GameData.CHOHAN_STORY else ["liu_bang", "xiang_yu"]
@@ -2961,8 +3172,24 @@ func _adult(id: String) -> bool:
 	return GameState.owns(id) and GameState.get_puppy(id).is_adult()
 
 
+## 이어지는 이야기: 앞 이야기를 끝까지 봐야 열림
+func _sp_after(id: String) -> Array:
+	if StoryData.BOOKS.has(id):
+		return StoryData.BOOKS[id].get("after", [])
+	return []
+
+
+func _sp_after_ok(id: String) -> bool:
+	for a in _sp_after(id):
+		if not GameState.story_seen(str(a)):
+			return false
+	return true
+
+
 ## 이 스페셜 이야기 조건을 채웠는지
 func _sp_ready(id: String) -> bool:
+	if not _sp_after_ok(id):
+		return false
 	match id:
 		"sp_taoyuan":
 			return GameState.is_sworn("liu_bei", "guan_yu") and GameState.is_sworn("liu_bei", "zhang_fei") \
@@ -3039,7 +3266,10 @@ func _sp_card(id: String) -> Control:
 	var title := _label(book["title"] if seen else "???", 28)   # 제목은 끝까지 봐야 알 수 있음
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	info.add_child(title)
-	var cond := _label(("★ " if ok_ or seen else "") + _mask_names(str(book["cond"]), book["faces"]), 18)
+	var cond_text := _mask_names(str(book["cond"]), book["faces"])
+	if not seen and not _sp_after_ok(id):
+		cond_text = "앞 이야기를 먼저 끝까지 봐요 · " + cond_text
+	var cond := _label(("★ " if ok_ or seen else "") + cond_text, 18)
 	cond.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	cond.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	cond.add_theme_color_override("font_color", Color(0.3, 0.6, 0.36) if ok_ or seen else SUB_COLOR)
@@ -3051,7 +3281,9 @@ func _sp_card(id: String) -> Control:
 		h.add_child(_small_button("이어 보기", _open_sp_story.bind(id, false), "", Color(0.86, 0.6, 0.2)))
 	else:
 		var block := ""
-		if not ok_:
+		if not _sp_after_ok(id):
+			block = "앞 이야기를 먼저 봐요"
+		elif not ok_:
 			block = "조건을 채워요"
 		elif GameState.merits < cost:
 			block = "공훈패가 모자라요"
