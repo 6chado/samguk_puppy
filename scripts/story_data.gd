@@ -1,7 +1,7 @@
 extends RefCounted
 ## 스페셜 이야기 원고 (tools 없이 직접 고쳐도 됨). 해금: adult 멍냥이 모두 어른 + 공훈패
 
-const ORDER: Array[String] = ["sp_pangtong", "sp_xushu", "sp_weiyan", "sp_dingjun", "sp_zhugebro", "sp_machao", "sp_xiahoudun", "sp_dingjunshadow", "sp_guojia", "sp_jiaxu", "sp_guandu", "sp_wuchao", "sp_chengong", "sp_xiapi", "sp_xuhuang", "sp_shangxiang", "sp_arrows", "sp_kurou", "sp_dongfeng", "sp_hefei", "sp_ganning", "sp_zhoutai", "sp_taishici", "sp_baiyi", "sp_sunjian", "sp_seal", "sp_duanjin", "sp_xiongjie", "sp_yiling", "sp_baima", "sp_wenyang", "sp_hongmen", "sp_hanxin", "sp_simian", "sp_tusi", "sp_wujiang", "sp_weishui", "sp_zhonglimo", "sp_yingbu", "sp_caocan", "sp_luzhi", "sp_jiangwei", "sp_luofeng", "sp_langzhong", "sp_emptybox", "sp_qianli", "sp_flood", "sp_huarong", "sp_maicheng", "sp_wuzhang", "sp_shulast", "sp_simawait", "sp_simayan"]
+const ORDER: Array[String] = ["sp_pangtong", "sp_xushu", "sp_weiyan", "sp_dingjun", "sp_zhugebro", "sp_machao", "sp_xiahoudun", "sp_dingjunshadow", "sp_guojia", "sp_jiaxu", "sp_guandu", "sp_wuchao", "sp_chengong", "sp_xiapi", "sp_xuhuang", "sp_shangxiang", "sp_arrows", "sp_kurou", "sp_dongfeng", "sp_hefei", "sp_ganning", "sp_zhoutai", "sp_taishici", "sp_baiyi", "sp_sunjian", "sp_seal", "sp_duanjin", "sp_xiongjie", "sp_yiling", "sp_baima", "sp_wenyang", "sp_hongmen", "sp_hanxin", "sp_simian", "sp_tusi", "sp_wujiang", "sp_weishui", "sp_zhonglimo", "sp_yingbu", "sp_caocan", "sp_luzhi", "sp_jiangwei", "sp_luofeng", "sp_langzhong", "sp_emptybox", "sp_qianli", "sp_flood", "sp_huarong", "sp_maicheng", "sp_wuzhang", "sp_shulast", "sp_simawait", "sp_simayan", "sp_jealous", "sp_beimang"]
 
 const BOOKS := {
 	"sp_pangtong": {"title": "반나절 만에?!", "adult": ["pang_tong", "zhang_fei"], "pages": [
@@ -343,5 +343,21 @@ const BOOKS := {
 		{"text": "하지만 이불 속에서 사마의 고양이의 눈은\n반짝반짝 빛나고 있었답니다.", "btn": "수상해..", "cast": [["sima_yi", "squint"]]},
 		{"text": "조상 강아지가 사냥을 떠난 날,\n사마사·사마소 고양이가 쏙 튀어나왔어요!", "btn": "지금이다!", "cast": [["sima_shi", "line"], ["sima_zhao", "line"]]},
 		{"text": "\"오래 기다린 보람이 있구나.\"\n사마의 고양이가 꼬리를 느긋하게 흔들었어요.", "btn": "대단해!", "cast": [["sima_yi", "squint"], ["sima_shi", "squint"], ["sima_zhao", "squint"]], "party": true},
+	]},
+	"sp_jealous": {"title": "따끈한 국 한 그릇", "adult": ["he_taihou", "wang_meiren", "liu_xie"], "after": [], "pages": [
+		{"text": "낙양 궁궐에는 두 고양이가 살았어요.\n금관을 쓴 하태후 고양이와\n흰 꽃을 단 왕미인 고양이였지요.", "btn": "예쁘다!", "cast": [["he_taihou", "squint"], ["wang_meiren", "squint"]]},
+		{"text": "왕미인 고양이가 아기 유협 강아지를 낳자\n황제는 꼬리를 살랑살랑 흔들며 기뻐했어요.", "btn": "축하해!", "cast": [["wang_meiren", "squint"], ["liu_xie", "open"]]},
+		{"text": "그 모습을 본 하태후 고양이는\n발톱을 세우고 수염을 파르르 떨었어요.", "btn": "질투한다..", "cast": [["he_taihou", "line", "anger"]]},
+		{"text": "어느 날 하태후 고양이가\n따끈한 국 한 그릇을 보냈어요.\n\"몸보신하렴~\"", "btn": "수상해..", "cast": [["he_taihou", "half"]]},
+		{"text": "국을 마신 왕미인 고양이는\n아기 유협 강아지를 앞발로 꼭 안은 채\n스르르 잠이 들었어요.", "btn": "안 돼..", "cast": [["wang_meiren", "closed"], ["liu_xie", "closed"]]},
+		{"text": "그리고 다시는 눈을 뜨지 않았답니다.\n아기 유협 강아지는 엄마 품에서\n밤새 낑낑 울었어요.", "btn": "왕미인..", "cast": [["liu_xie", "closed", "tears"]]},
+	]},
+	"sp_beimang": {"title": "북망산의 반딧불", "adult": ["liu_bian", "liu_xie"], "after": ["sp_jealous"], "pages": [
+		{"text": "궁궐에 큰 난리가 났어요!\n유변 강아지와 유협 강아지는\n깜깜한 밤에 몰래 궁궐을 빠져나왔지요.", "btn": "도망쳐!", "cast": [["liu_bian", "open"], ["liu_xie", "open"]]},
+		{"text": "북망산 풀숲은 너무너무 어두웠어요.\n\"형, 무서워...\" 유협 강아지가\n형의 꼬리를 앙 물었어요.", "btn": "무서워..", "cast": [["liu_xie", "closed", "tears"], ["liu_bian", "half"]]},
+		{"text": "그때 반딧불이가 반짝반짝 날아와\n형제의 길을 비춰 주었어요.", "btn": "반짝반짝!", "cast": [["liu_bian", "squint"], ["liu_xie", "squint"]]},
+		{"text": "형제는 서로 앞발을 꼭 잡고\n반딧불이를 따라 밤새 걸었답니다.", "btn": "힘내!", "cast": [["liu_bian", "half"], ["liu_xie", "half"]]},
+		{"text": "날이 밝자 커다란 그림자가 나타났어요.\n\"폐하, 이 동탁이 모시러 왔습니다~\"", "btn": "누구야?!", "cast": [["dong_zhuo", "half"], ["liu_bian", "open"]]},
+		{"text": "유변 강아지는 동생을 등 뒤에 숨기고\n귀를 바짝 세웠어요.\n아무도 모르게 꼬리가 달달 떨렸지요.", "btn": "그 뒤에는...", "cast": [["liu_bian", "line"], ["liu_xie", "open"]]},
 	]},
 }

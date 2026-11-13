@@ -874,15 +874,21 @@ func _show_photo() -> void:
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	_fat_scrollbar(scroll)   # 다른 목록과 같은 굵은 스크롤 막대
 	v.add_child(scroll)
 	_photo_ui.append(scroll)
+	var pad := MarginContainer.new()   # 막대와 카드가 겹치지 않게 오른쪽 여백
+	pad.size_flags_horizontal = SIZE_EXPAND_FILL
+	pad.add_theme_constant_override("margin_right", int(REL_BAR_W) + 10)
+	scroll.add_child(pad)
 	var grid := GridContainer.new()
 	grid.columns = 4
 	grid.size_flags_horizontal = SIZE_EXPAND_FILL
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 8)
-	scroll.add_child(grid)
+	pad.add_child(grid)
+	_drag_scroll(scroll, pad)
+	grid.child_entered_tree.connect(_pass_buttons)   # 카드 위를 끌어도 스크롤
 	for fid in GameData.faction_order():
 		for id in GameState.owned_in(fid):
 			var card := _dog_card(id, PuppyView.STAGE_FORM[GameState.stage_of(id)], GameData.DOGS[id]["name"], _on_photo_pick.bind(id))

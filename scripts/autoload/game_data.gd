@@ -168,6 +168,10 @@ const DOGS := {
 	"diao_chan":   {"name": "초선",   "faction": "special", "role": "strategist", "color": Color(0.98, 0.91, 0.89)},
 	"hua_tuo":     {"name": "화타",   "faction": "special", "role": "strategist", "color": Color(0.97, 0.96, 0.94)},
 	"dong_zhuo":   {"name": "동탁",   "faction": "special", "role": "warrior",    "color": Color(0.8, 0.63, 0.43)},
+	"he_taihou":   {"name": "하태후", "faction": "special", "role": "strategist", "color": Color(0.96, 0.92, 0.84)},
+	"wang_meiren": {"name": "왕미인", "faction": "special", "role": "strategist", "color": Color(0.93, 0.89, 0.84)},
+	"liu_bian":    {"name": "유변",   "faction": "special", "role": "warrior",    "color": Color(0.99, 0.98, 0.97)},
+	"liu_xie":     {"name": "유협",   "faction": "special", "role": "warrior",    "color": Color(0.99, 0.98, 0.97)},
 	# 추가: 위
 	"zhang_he":    {"name": "장합",   "faction": "wei", "role": "warrior",    "color": Color(0.96, 0.94, 0.89)},
 	"li_dian":     {"name": "이전",   "faction": "wei", "role": "warrior",    "color": Color(0.84, 0.63, 0.36)},
@@ -235,6 +239,10 @@ const HATES := [
 	["dong_zhuo", "lu_bu"],         # 봉의정 / 연환계
 	["dong_zhuo", "cao_cao"],       # 칠성검 암살 시도
 	["dong_zhuo", "yuan_shao"],     # 반동탁 연합 맹주
+	["dong_zhuo", "liu_bian"],      # 황제 자리에서 끌어내림
+	["dong_zhuo", "liu_xie"],       # 꼭두각시 황제로 세움
+	["dong_zhuo", "he_taihou"],     # 낙양을 차지하고 태후를 몰아냄
+	["he_taihou", "wang_meiren"],   # 황제의 사랑을 시샘
 	["deng_ai", "zhong_hui"],       # 촉 정벌 공 다툼
 	["deng_ai", "jiang_wei"],
 	["zhong_hui", "sima_zhao"],     # 사마소에게 반기를 듦
@@ -373,6 +381,7 @@ const SPECIAL_TITLES: Array = [
 	{"a": "ying_bu", "b": "zhang_liang", "name": "한나라로 오세요", "wins": 10},
 	{"a": "zhongli_mo", "b": "yu_ji", "name": "항우를 지켜라", "wins": 10},
 	{"a": "long_ju", "b": "yu_ji", "name": "초나라의 맹장", "wins": 10},
+	{"a": "liu_bian", "b": "liu_xie", "name": "북망산의 형제", "wins": 10},
 ]
 
 
@@ -511,6 +520,10 @@ const TRUST := [
 	["han_xin", "zhongli_mo"],        # 진영은 달라도 오랜 친구
 	["xiao_he", "cao_can"],           # 소규조수
 	["xiang_yu", "yu_ji"],            # 사면초가
+	# 후한 황실
+	["liu_bian", "liu_xie"],          # 북망산으로 함께 피신한 형제
+	["he_taihou", "liu_bian"],        # 엄마와 아들
+	["wang_meiren", "liu_xie"],       # 엄마와 아들
 ]
 ## 크면 풀리는 앙숙: {"a|b": 이 멍냥이가 어른이 되면 화해 / "both" = 둘 다 어른이 되면 화해}
 ## 화해한 뒤로는 놀기·고백·의형제 다 가능. (제갈량 ↔ 주유는 일부러 영원히 앙숙)
@@ -549,6 +562,7 @@ const GROUP_TITLES: Array = [
 	{"name": "진의 맹장", "members": ["deng_ai", "wen_yang", "sima_zhao"]},
 	{"name": "조씨 부자", "members": ["cao_cao", "cao_pi"]},
 	{"name": "촉의 마지막 불꽃", "members": ["jiang_wei", "xiahou_ba", "ma_dai", "liu_shan"]},
+	{"name": "낙양의 황실", "members": ["he_taihou", "wang_meiren", "liu_bian", "liu_xie"]},
 ]
 
 
@@ -596,6 +610,9 @@ const FAMILY := [
 	["yuan_shao", "yuan_shu"],
 	["liu_bang", "fan_kuai"],       # 동서
 	["liu_bang", "lu_zhi"],         # 부부
+	["liu_bian", "liu_xie"],        # 형제
+	["he_taihou", "liu_bian"],      # 엄마 - 아들
+	["wang_meiren", "liu_xie"],     # 엄마 - 아들
 ]
 
 
