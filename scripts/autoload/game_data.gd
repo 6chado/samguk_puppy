@@ -520,8 +520,7 @@ const TRUST := [
 	["han_xin", "zhongli_mo"],        # 진영은 달라도 오랜 친구
 	["xiao_he", "cao_can"],           # 소규조수
 	["xiang_yu", "yu_ji"],            # 사면초가
-	# 후한 황실
-	["liu_bian", "liu_xie"],          # 북망산으로 함께 피신한 형제
+	# 후한 황실: 엄마와 아기만 신뢰
 	["he_taihou", "liu_bian"],        # 엄마와 아들
 	["wang_meiren", "liu_xie"],       # 엄마와 아들
 ]
@@ -610,9 +609,13 @@ const FAMILY := [
 	["yuan_shao", "yuan_shu"],
 	["liu_bang", "fan_kuai"],       # 동서
 	["liu_bang", "lu_zhi"],         # 부부
+	# 후한 황실 네 식구 (서로 모두 가족)
 	["liu_bian", "liu_xie"],        # 형제
 	["he_taihou", "liu_bian"],      # 엄마 - 아들
 	["wang_meiren", "liu_xie"],     # 엄마 - 아들
+	["he_taihou", "wang_meiren"],   # 같은 황제의 부인
+	["he_taihou", "liu_xie"],
+	["wang_meiren", "liu_bian"],
 ]
 
 
