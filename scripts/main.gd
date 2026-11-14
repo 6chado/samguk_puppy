@@ -46,8 +46,10 @@ var stage_label: Label
 var title_tag: HBoxContainer   # 키우기 화면 칭호 꼬리표 자리
 var exp_bar: ProgressBar
 var exp_label: Label
+var exp_name: Label            # 경험치 줄 왼쪽 이름 ("경험치" / 어른이면 "친밀도")
 var fatigue_bar: ProgressBar
 var fatigue_label: Label
+var fatigue_num: Label         # 피로도 줄 오른쪽 숫자
 var sleep_button: Button
 var bag_button: Button
 var puppy_view: PuppyView
@@ -194,6 +196,7 @@ func _page_header(v: VBoxContainer, back_text: String, back_cb: Callable, title:
 	var back := _button(back_text, back_cb)
 	back.custom_minimum_size = Vector2(150, 70)
 	back.add_theme_font_size_override("font_size", _fs(24))
+	_quiet_button(back)
 	header.add_child(back)
 	var t := _label(title, 38)
 	t.size_flags_horizontal = SIZE_EXPAND_FILL
@@ -249,15 +252,18 @@ func _show_home() -> void:
 	var top_row := HBoxContainer.new()
 	top_row.alignment = BoxContainer.ALIGNMENT_END
 	v.add_child(top_row)
+	# 초기화: 되돌릴 수 없는 기능이라 버튼 대신 연한 글씨로 (누르면 확인창이 한 번 더 뜸)
 	var reset := _button("초기화", _ask_reset)
-	reset.custom_minimum_size = Vector2(110, 48)
+	reset.custom_minimum_size = Vector2(96, 40)
 	reset.add_theme_font_size_override("font_size", _fs(18))
-	var grey := Color(0.72, 0.68, 0.64)
-	reset.add_theme_stylebox_override("normal", _box(grey, 14))
-	reset.add_theme_stylebox_override("hover", _box(grey.lightened(0.1), 14))
-	reset.add_theme_stylebox_override("pressed", _box(grey.darkened(0.15), 14))
+	for key in ["normal", "hover", "pressed"]:
+		reset.add_theme_stylebox_override(key, StyleBoxEmpty.new())
+	for key in ["font_color", "font_focus_color"]:
+		reset.add_theme_color_override(key, SUB_COLOR)
+	for key in ["font_hover_color", "font_pressed_color"]:
+		reset.add_theme_color_override(key, TEXT_COLOR)
 	top_row.add_child(reset)
-	v.add_child(_label("%s 삼국지 멍냥이 키우기 %s" % [CAT, CAT2], 37))
+	v.add_child(_label("%s 삼국지 멍냥이 키우기 %s" % [CAT, CAT2], 34))
 
 	var ticket_row := HBoxContainer.new()
 	ticket_row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -288,10 +294,7 @@ func _show_home() -> void:
 	var mini := _button("대전", _show_mini)
 	_set_button_icon(mini, "icon_strategy")
 	mini.custom_minimum_size = Vector2(0, 100)
-	var navy := Color(0.36, 0.38, 0.6)
-	mini.add_theme_stylebox_override("normal", _box(navy, 18))
-	mini.add_theme_stylebox_override("hover", _box(navy.lightened(0.1), 18))
-	mini.add_theme_stylebox_override("pressed", _box(navy.darkened(0.15), 18))
+	_quiet_button(mini)   # 보조 버튼 (주황으로 꽉 칠한 건 "키우러 가기"만)
 	mini.add_theme_stylebox_override("disabled", _box(Color(0.74, 0.72, 0.7), 18))
 	mini.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.9))
 	if not GameState.battle_tut_done:
@@ -316,20 +319,19 @@ func _show_home() -> void:
 	_set_button_icon(dex, "icon_strategy")
 	dex.custom_minimum_size = Vector2(0, 110)
 	dex.size_flags_horizontal = SIZE_EXPAND_FILL
+	_quiet_button(dex)
 	row.add_child(dex)
 	var cam := _button("사진", _show_photo)
 	_set_button_icon(cam, "icon_camera")
 	cam.custom_minimum_size = Vector2(0, 110)
 	cam.size_flags_horizontal = SIZE_EXPAND_FILL
+	_quiet_button(cam)
 	row.add_child(cam)
 	var story := _button("이야기", _show_sp_stories)
 	_set_button_icon(story, "item_scroll")
 	story.custom_minimum_size = Vector2(0, 110)
 	story.size_flags_horizontal = SIZE_EXPAND_FILL
-	var plum := Color(0.55, 0.45, 0.72)
-	story.add_theme_stylebox_override("normal", _box(plum, 18))
-	story.add_theme_stylebox_override("hover", _box(plum.lightened(0.1), 18))
-	story.add_theme_stylebox_override("pressed", _box(plum.darkened(0.15), 18))
+	_quiet_button(story)
 	row.add_child(story)
 	for b in [gacha, dex, cam, story]:   # 4개라 글씨·아이콘 조금 작게
 		b.add_theme_font_size_override("font_size", _fs(28))
@@ -410,7 +412,8 @@ func _faction_page(kind: String) -> void:
 				others.append(id)
 
 	# 맨 윗줄: 주군 한 마리 가운데 (금색 테두리). 아래 칸들과 크기가 똑같도록 같은 3칸 격자에 [빈칸, 주군, 빈칸]
-	if lord != "" and (GameState.owns(lord) or kind == "dex"):
+	var lord_shown := lord != "" and (GameState.owns(lord) or kind == "dex")
+	if lord_shown:
 		var top := _grid(list)
 		var card := _page_card(kind, lord)
 		if GameState.owns(lord):
@@ -423,7 +426,8 @@ func _faction_page(kind: String) -> void:
 			top.add_child(c)
 
 	if others.is_empty():
-		var none := _label("아직 없어요. 뽑기로 데려와요!", 26)
+		# 주군은 있는데 다른 애가 없을 때 "아직 없어요"라고 하면 헷갈려서 문구를 나눔
+		var none := _label("다른 멍냥이는 뽑기로 데려와요!" if lord_shown else "아직 없어요. 뽑기로 데려와요!", 26)
 		none.add_theme_color_override("font_color", SUB_COLOR)
 		list.add_child(none)
 		return
@@ -643,6 +647,7 @@ func _rank_panel(id: String, full: bool) -> Control:
 			box.add_child(gflow)
 			var gh := _label("멤버 모두 칭호 3단계(교위·참군) 이상이면 받아요", 16)
 			gh.add_theme_color_override("font_color", SUB_COLOR)
+			gh.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			box.add_child(gh)
 	return box
 
@@ -1235,6 +1240,7 @@ func _build_raise_screen() -> void:
 	back_button = _button("← 목록", _on_back)
 	back_button.custom_minimum_size = Vector2(150, 70)
 	back_button.add_theme_font_size_override("font_size", _fs(24))
+	_quiet_button(back_button)
 	header.add_child(back_button)
 	title_label = _label("", 40)
 	title_label.size_flags_horizontal = SIZE_EXPAND_FILL
@@ -1252,25 +1258,45 @@ func _build_raise_screen() -> void:
 	title_tag = HBoxContainer.new()   # 대전 칭호 (회색→동→은→금→다이아→무지개)
 	title_tag.size_flags_vertical = SIZE_SHRINK_CENTER
 	stage_row.add_child(title_tag)
+	# 경험치 · 피로도: 두 줄 모두 [이름 | 막대 | 숫자] 같은 모양으로 맞춤 (막대 시작·끝이 한 줄에 정렬)
+	var exp_row := HBoxContainer.new()
+	exp_row.add_theme_constant_override("separation", 12)
+	v.add_child(exp_row)
+	exp_name = _label("경험치", 22)
+	exp_name.custom_minimum_size = Vector2(100, 0)
+	exp_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	exp_row.add_child(exp_name)
 	exp_bar = ProgressBar.new()
 	exp_bar.show_percentage = false
-	exp_bar.custom_minimum_size = Vector2(0, 26)
-	v.add_child(exp_bar)
+	exp_bar.size_flags_horizontal = SIZE_EXPAND_FILL
+	exp_bar.size_flags_vertical = SIZE_SHRINK_CENTER
+	exp_bar.custom_minimum_size = Vector2(0, 24)
+	exp_row.add_child(exp_bar)
 	exp_label = _label("", 22)
-	v.add_child(exp_label)
+	exp_label.custom_minimum_size = Vector2(150, 0)
+	exp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	exp_label.add_theme_color_override("font_color", SUB_COLOR)
+	exp_row.add_child(exp_label)
 	var fatigue_row := HBoxContainer.new()
-	fatigue_row.add_theme_constant_override("separation", 10)
+	fatigue_row.add_theme_constant_override("separation", 12)
 	v.add_child(fatigue_row)
 	fatigue_label = _label("피로도", 22)
+	fatigue_label.custom_minimum_size = Vector2(100, 0)
+	fatigue_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	fatigue_row.add_child(fatigue_label)
 	fatigue_bar = ProgressBar.new()
 	fatigue_bar.show_percentage = false
 	fatigue_bar.max_value = GameData.FATIGUE_MAX
 	fatigue_bar.size_flags_horizontal = SIZE_EXPAND_FILL
 	fatigue_bar.size_flags_vertical = SIZE_SHRINK_CENTER
-	fatigue_bar.custom_minimum_size = Vector2(0, 22)
-	fatigue_bar.add_theme_stylebox_override("fill", _box(Color(0.55, 0.55, 0.85), 11))
+	fatigue_bar.custom_minimum_size = Vector2(0, 24)
+	fatigue_bar.add_theme_stylebox_override("fill", _box(Color(0.55, 0.55, 0.85), 12))
 	fatigue_row.add_child(fatigue_bar)
+	fatigue_num = _label("", 22)
+	fatigue_num.custom_minimum_size = Vector2(150, 0)
+	fatigue_num.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	fatigue_num.add_theme_color_override("font_color", SUB_COLOR)
+	fatigue_row.add_child(fatigue_num)
 
 	puppy_view = PuppyView.new()
 	puppy_view.size_flags_vertical = SIZE_EXPAND_FILL
@@ -1340,7 +1366,11 @@ func _build_raise_screen() -> void:
 		badge.set_anchors_and_offsets_preset(PRESET_TOP_RIGHT, PRESET_MODE_MINSIZE, 6)
 
 		food_buttons[food_id] = {"button": b, "content": box, "gain": gain_label, "badge": badge,
-			"icon": icon, "name": name_label}
+			"icon": icon, "name": name_label,
+			# 못 쓰는 음식(0개·피곤): 종이색 칸 + 갈색 글씨 → 회색 위 흰 글씨보다 잘 읽힘
+			"locked_box": _card_box(Color(0.95, 0.92, 0.86), Color(0.86, 0.81, 0.74), 2),
+			# 다른 행동 중이라 잠깐 못 누를 때: 평소 모습 그대로 (깜빡임 방지)
+			"busy_box": _box(Color(0.86, 0.52, 0.32), 18)}
 
 	var bottom := HBoxContainer.new()
 	bottom.add_theme_constant_override("separation", 10)
@@ -1357,6 +1387,7 @@ func _build_raise_screen() -> void:
 	bag_button.custom_minimum_size = Vector2(0, 110)
 	bag_button.add_theme_font_size_override("font_size", 30)
 	bag_button.size_flags_horizontal = SIZE_EXPAND_FILL
+	_quiet_button(bag_button)   # 가방은 보조 버튼 (전투가 주요 버튼)
 	bottom.add_child(bag_button)
 	sleep_button = _button("잠자기", _on_sleep)
 	_set_button_icon(sleep_button, "icon_sleep")
@@ -1419,18 +1450,20 @@ func _refresh() -> void:
 	if puppy.is_adult():
 		exp_bar.max_value = 1
 		exp_bar.value = 1
-		exp_label.text = "다 컸다! 친밀도 %d" % puppy.affection
+		exp_name.text = "친밀도"
+		exp_label.text = str(puppy.affection)
 	else:
 		var lo: int = GameData.STAGE_EXP[stage]
 		var hi: int = GameData.STAGE_EXP[stage + 1]
 		exp_bar.max_value = hi
 		exp_bar.min_value = lo
 		exp_bar.value = puppy.total_exp
-		exp_label.text = "경험치 %d / %d" % [puppy.total_exp, hi]
+		exp_name.text = "경험치"
+		exp_label.text = "%d / %d" % [puppy.total_exp, hi]
 
 	var exhausted := puppy.is_exhausted()
 	fatigue_bar.value = puppy.fatigue
-	fatigue_label.text = "피로도 MAX" if exhausted else "피로도"
+	fatigue_num.text = "MAX" if exhausted else "%d / %d" % [puppy.fatigue, GameData.FATIGUE_MAX]
 	puppy_view.tired = exhausted and not puppy_view.sleeping
 
 	for food_id in food_buttons:
@@ -1441,7 +1474,13 @@ func _refresh() -> void:
 		var badge: Label = ui["badge"]
 		var gain: Label = ui["gain"]
 		b.disabled = busy or exhausted or count <= 0
-		content.modulate.a = 0.45 if b.disabled else 1.0
+		var locked := exhausted or count <= 0
+		b.add_theme_stylebox_override("disabled", ui["locked_box"] if locked else ui["busy_box"])
+		content.modulate.a = 1.0
+		var food_icon_ctl: Control = ui["icon"]
+		food_icon_ctl.modulate.a = 0.4 if locked else 1.0
+		(ui["name"] as Label).add_theme_color_override("font_color", SUB_COLOR if locked else Color.WHITE)
+		gain.add_theme_color_override("font_color", SUB_COLOR if locked else Color(1, 1, 1, 0.85))
 		badge.text = str(count)
 		badge.visible = count > 0
 		gain.text = "친밀도+1" if puppy.is_adult() else "+%d exp" % GameData.FOODS[food_id]["exp"]
@@ -2135,6 +2174,7 @@ func _relation_card(me: String, other: String) -> Control:
 		else:
 			var hint := _label("둘 다 어른이 되면 클로버로 화해할 수 있어요", 16)
 			hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+			hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			hint.add_theme_color_override("font_color", SUB_COLOR)
 			info.add_child(hint)
 		return row
@@ -2209,9 +2249,13 @@ func _small_button(text: String, cb: Callable, block: String, col: Color, note :
 		b.add_theme_stylebox_override("pressed", _box(col.darkened(0.15), 18))
 	b.disabled = block != ""
 	box.add_child(b)
-	if block != "" or note != "":
-		var l := _label(block if block != "" else note, 15)
+	# block 이 " "(공백)이면: 못 누르게만 하고 이유 글씨는 생략 (이유가 이미 옆에 적혀 있을 때)
+	var reason: String = block.strip_edges() if block != "" else note
+	if reason != "":
+		var l := _label(reason, 15)
 		l.add_theme_color_override("font_color", SUB_COLOR)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART   # 이유가 길면 버튼 폭 안에서 줄바꿈
+		l.custom_minimum_size = Vector2(150, 0)
 		box.add_child(l)
 	return box
 
@@ -3304,7 +3348,7 @@ func _sp_card(id: String) -> Control:
 		if not _sp_after_ok(id):
 			block = "앞 이야기 먼저!"
 		elif not ok_:
-			block = "조건을 채워요"
+			block = " "   # 조건은 왼쪽에 이미 적혀 있어서, 줄마다 같은 안내는 생략
 		elif GameState.merits < cost:
 			block = "공훈패가 모자라요"
 		h.add_child(_small_button("열기 (공훈패 %d)" % cost, _open_sp_story.bind(id, true), block, Color(0.86, 0.6, 0.2)))
@@ -4978,8 +5022,29 @@ func _label(text: String, font_size: int) -> Label:
 	return l
 
 
+## 글자 크기 단계: 화면마다 제각각이던 크기를 이 7단계 중 가장 가까운 값으로 맞춤
+## (같은 거리면 큰 쪽 → 읽기 쉽게). 가장 작은 글씨도 18 아래로는 안 내려감 → 폰에서 읽히게
+const FONT_STEPS: Array[int] = [18, 20, 24, 28, 34, 40, 52]
+
+
 func _fs(font_size: int) -> int:
-	return int(round(font_size * FONT_SCALE))
+	var snapped_size := font_size
+	if font_size < 52:
+		snapped_size = FONT_STEPS[0]
+		for s in FONT_STEPS:
+			if absi(s - font_size) <= absi(snapped_size - font_size):
+				snapped_size = s
+	return int(round(snapped_size * FONT_SCALE))
+
+
+## 보조 버튼: 종이색 바탕 + 주황 테두리 + 갈색 글씨 (주요 버튼만 주황으로 꽉 칠해서 눈에 띄게)
+func _quiet_button(b: Button) -> void:
+	var edge := Color(0.86, 0.52, 0.32)
+	b.add_theme_stylebox_override("normal", _card_box(Color(1, 0.98, 0.94), edge, 3))
+	b.add_theme_stylebox_override("hover", _card_box(Color(1, 0.95, 0.88), edge, 3))
+	b.add_theme_stylebox_override("pressed", _card_box(Color(0.98, 0.9, 0.8), edge, 3))
+	for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		b.add_theme_color_override(key, TEXT_COLOR)
 
 
 func _button(text: String, callback: Callable) -> Button:
