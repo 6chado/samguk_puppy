@@ -32,9 +32,14 @@ var bg := 0:                  # BACKGROUNDS 번호
 	set(v):
 		bg = clampi(v, 0, BACKGROUNDS.size() - 1)
 		queue_redraw()
-var title := "삼국지 멍냥이":    # 사진 아래 글씨 (직접 수정 가능)
+var title := tr("삼국지 멍냥이"):    # 사진 아래 글씨 (직접 수정 가능)
 	set(v):
 		title = v
+		queue_redraw()
+
+var heart := true:            # 두 마리일 때 가운데 하트 (끄고 켤 수 있음)
+	set(v):
+		heart = v
 		queue_redraw()
 
 var _tex: Dictionary = {}
@@ -110,7 +115,7 @@ func _draw() -> void:
 			_draw_trio(r)
 		_:
 			if font:
-				draw_string(font, Vector2(r.position.x, r.get_center().y), "아래에서 멍냥이를 골라 주세요",
+				draw_string(font, Vector2(r.position.x, r.get_center().y), tr("아래에서 멍냥이를 골라 주세요"),
 					HORIZONTAL_ALIGNMENT_CENTER, r.size.x, int(size.y * 0.04), TEXT_COL)
 
 
@@ -159,7 +164,8 @@ func _draw_pair(r: Rect2) -> void:
 	var b := _draw_pet(pets[1], Vector2(r.get_center().x + gap, y), side, -0.15)   # 왼쪽으로 기댐
 	_draw_mark(pets[0], a, a.size.x)
 	_draw_mark(pets[1], b, b.size.x)
-	_draw_heart(Vector2(r.get_center().x, y - side * 0.95), side * 0.09)
+	if heart:
+		_draw_heart(Vector2(r.get_center().x, y - side * 0.95), side * 0.09)
 
 
 func _draw_trio(r: Rect2) -> void:

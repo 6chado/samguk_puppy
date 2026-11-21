@@ -95,9 +95,10 @@ var _photo_stage                       # 사진 무대
 var _photo_cards: Dictionary = {}      # dog_id -> 카드 버튼
 var _photo_expr_box: VBoxContainer
 var _photo_ui: Array = []
-var _photo_title := "삼국지 멍냥이"     # 사진 아래 글씨
+var _photo_title := tr("삼국지 멍냥이")     # 사진 아래 글씨
 var _photo_form: Dictionary = {}      # dog_id -> 사진에서 쓸 모습 (0 아기 / 1 청년 / 2 어른)
 var _photo_bg := 0                    # 배경색 번호
+var _photo_heart := true              # 두 마리 사진 가운데 하트 보이기
 var _photo_bg_btns: Array = []              # 찰칵 모드에서 숨길 것들
 var tut                        # 튜토리얼 스포트라이트
 var _tut_step := -1
@@ -137,7 +138,7 @@ func _ready() -> void:
 	var rv: VBoxContainer = r[1]
 	rel_title = _label("", 36)
 	rv.add_child(rel_title)
-	var hint := _label("놀기로 하트를, 선물하기로 복숭아를 채워요. 꽉 차면 고백 / 의형제!\n같은 진영은 금방 친해져요. 신뢰 관계는 한 칸 덜 채워도 돼요.", 20)
+	var hint := _label(tr("놀기로 하트를, 선물하기로 복숭아를 채워요. 꽉 차면 고백 / 의형제!\n같은 진영은 금방 친해져요. 신뢰 관계는 한 칸 덜 채워도 돼요."), 20)
 	hint.add_theme_color_override("font_color", SUB_COLOR)
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	rv.add_child(hint)
@@ -147,8 +148,8 @@ func _ready() -> void:
 	rel_list = r[2]
 	var b := _build_panel_overlay(Vector2(600, 620))
 	bag_overlay = b[0]
-	(b[1] as VBoxContainer).add_child(_label("가방 (희귀템)", 36))
-	var bag_hint := _label("전투·책략에서 가끔 나와요. 한 번 쓰면 사라져요.", 20)
+	(b[1] as VBoxContainer).add_child(_label(tr("가방 (희귀템)"), 36))
+	var bag_hint := _label(tr("전투·책략에서 가끔 나와요. 한 번 쓰면 사라져요."), 20)
 	bag_hint.add_theme_color_override("font_color", SUB_COLOR)
 	(b[1] as VBoxContainer).add_child(bag_hint)
 	bag_list = b[2]
@@ -253,7 +254,7 @@ func _show_home() -> void:
 	top_row.alignment = BoxContainer.ALIGNMENT_END
 	v.add_child(top_row)
 	# 초기화: 되돌릴 수 없는 기능이라 버튼 대신 연한 글씨로 (누르면 확인창이 한 번 더 뜸)
-	var reset := _button("초기화", _ask_reset)
+	var reset := _button(tr("초기화"), _ask_reset)
 	reset.custom_minimum_size = Vector2(96, 40)
 	reset.add_theme_font_size_override("font_size", _fs(18))
 	for key in ["normal", "hover", "pressed"]:
@@ -263,7 +264,7 @@ func _show_home() -> void:
 	for key in ["font_hover_color", "font_pressed_color"]:
 		reset.add_theme_color_override(key, TEXT_COLOR)
 	top_row.add_child(reset)
-	v.add_child(_label("%s 삼국지 멍냥이 키우기 %s" % [CAT, CAT2], 34))
+	v.add_child(_label(tr("%s 삼국지 멍냥이 키우기 %s") % [_t(CAT), _t(CAT2)], 34))
 
 	var ticket_row := HBoxContainer.new()
 	ticket_row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -275,11 +276,11 @@ func _show_home() -> void:
 	ticket_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	ticket_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	ticket_row.add_child(ticket_icon)
-	ticket_row.add_child(_label("뽑기권 %d장" % GameState.tickets, 28))
+	ticket_row.add_child(_label(tr("뽑기권 %d장") % _t(GameState.tickets), 28))
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(30, 0)
 	ticket_row.add_child(spacer)
-	ticket_row.add_child(_label("도감 %d/%d" % [GameState.owned.size(), GameState.dex_total()], 28))
+	ticket_row.add_child(_label(tr("도감 %d/%d") % [_t(GameState.owned.size()), _t(GameState.dex_total())], 28))
 
 	var id: String = GameState.current
 	var home_view := PuppyView.new()   # 홈에서도 쓰다듬으면 하트는 나옴 (수치는 안 바뀜)
@@ -288,10 +289,10 @@ func _show_home() -> void:
 	home_view.body_color = GameData.DOGS[id]["color"]
 	home_view.dog_id = id
 	home_view.stage = GameState.stage_of(id)
-	v.add_child(_label("%s  ·  %s" % [GameData.DOGS[id]["name"], GameData.stage_name(GameState.stage_of(id), id)], 34))
+	v.add_child(_label("%s  ·  %s" % [tr(GameData.DOGS[id]["name"]), GameData.stage_name(GameState.stage_of(id), id)], 34))
 
 	# 대전 (튜토리얼 보기 전엔 회색 잠김)
-	var mini := _button("대전", _show_mini)
+	var mini := _button(tr("대전"), _show_mini)
 	_set_button_icon(mini, "icon_strategy")
 	mini.custom_minimum_size = Vector2(0, 100)
 	_quiet_button(mini)   # 보조 버튼 (주황으로 꽉 칠한 건 "키우러 가기"만)
@@ -299,13 +300,13 @@ func _show_home() -> void:
 	mini.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.9))
 	if not GameState.battle_tut_done:
 		mini.disabled = true
-		mini.text = "대전 · 무장과 책사를 어른으로 키우면 열려요"
+		mini.text = tr("대전 · 무장과 책사를 어른으로 키우면 열려요")
 		mini.add_theme_font_size_override("font_size", _fs(22))
 	v.add_child(mini)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	v.add_child(row)
-	var gacha := _button("뽑기", _show_gacha)
+	var gacha := _button(tr("뽑기"), _show_gacha)
 	_home_gacha_btn = gacha
 	_set_button_icon(gacha, "ticket")
 	gacha.custom_minimum_size = Vector2(0, 110)
@@ -315,19 +316,19 @@ func _show_home() -> void:
 	gacha.add_theme_stylebox_override("hover", _box(pink.lightened(0.1), 18))
 	gacha.add_theme_stylebox_override("pressed", _box(pink.darkened(0.15), 18))
 	row.add_child(gacha)
-	var dex := _button("도감", _show_dex)
+	var dex := _button(tr("도감"), _show_dex)
 	_set_button_icon(dex, "icon_strategy")
 	dex.custom_minimum_size = Vector2(0, 110)
 	dex.size_flags_horizontal = SIZE_EXPAND_FILL
 	_quiet_button(dex)
 	row.add_child(dex)
-	var cam := _button("사진", _show_photo)
+	var cam := _button(tr("사진"), _show_photo)
 	_set_button_icon(cam, "icon_camera")
 	cam.custom_minimum_size = Vector2(0, 110)
 	cam.size_flags_horizontal = SIZE_EXPAND_FILL
 	_quiet_button(cam)
 	row.add_child(cam)
-	var story := _button("이야기", _show_sp_stories)
+	var story := _button(tr("이야기"), _show_sp_stories)
 	_set_button_icon(story, "item_scroll")
 	story.custom_minimum_size = Vector2(0, 110)
 	story.size_flags_horizontal = SIZE_EXPAND_FILL
@@ -337,7 +338,12 @@ func _show_home() -> void:
 		b.add_theme_font_size_override("font_size", _fs(28))
 		b.add_theme_constant_override("icon_max_width", 48)
 		b.add_theme_constant_override("h_separation", 6)
-	var go := _button("키우러 가기", _show_roster)
+		if not GameData.is_ko():   # 번역판은 글씨가 길어서 아이콘을 글씨 위로 올림
+			b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+			b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			b.add_theme_font_size_override("font_size", _fs(24))
+			b.add_theme_constant_override("icon_max_width", 40)
+	var go := _button(tr("키우러 가기"), _show_roster)
 	go.custom_minimum_size = Vector2(0, 120)
 	go.add_theme_font_size_override("font_size", _fs(38))
 	v.add_child(go)
@@ -362,10 +368,10 @@ func _faction_page(kind: String) -> void:
 	if _tab_faction == "":
 		_tab_faction = GameData.faction_of(GameState.current)
 	var v := _new_page()
-	var title := "키우러 가기" if kind == "roster" else "도감 %d / %d" % [GameState.owned.size(), GameState.dex_total()]
-	_page_header(v, "← 홈", _show_home, title)
+	var title := tr("키우러 가기") if kind == "roster" else tr("도감 %d / %d") % [_t(GameState.owned.size()), _t(GameState.dex_total())]
+	_page_header(v, tr("← 홈"), _show_home, title)
 	if kind == "dex":   # 칭호·스페셜 칭호·단체 칭호·이야기 모아 보기
-		var rec := _button("칭호 · 이야기 모아 보기", _show_records.bind("rank"))
+		var rec := _button(tr("칭호 · 이야기 모아 보기"), _show_records.bind("rank"))
 		_set_button_icon(rec, "item_scroll")
 		rec.custom_minimum_size = Vector2(0, 80)
 		rec.add_theme_font_size_override("font_size", _fs(26))
@@ -381,14 +387,14 @@ func _faction_page(kind: String) -> void:
 			if GameData.faction_of(id) == fid and GameData.available(id):
 				total += 1
 		var have: int = GameState.owned_in(fid).size()
-		var label := "%s\n%d" % [GameData.FACTIONS[fid]["name"], have] if kind == "roster" \
-			else "%s\n%d/%d" % [GameData.FACTIONS[fid]["name"], have, total]
+		var label := "%s\n%d" % [tr(GameData.FACTIONS[fid]["name"]), have] if kind == "roster" \
+			else "%s\n%d/%d" % [tr(GameData.FACTIONS[fid]["name"]), have, total]
 		var tab := _button(label, func() -> void:
 			_tab_faction = fid
 			_faction_page(kind))
 		tab.custom_minimum_size = Vector2(0, 96)
 		tab.size_flags_horizontal = SIZE_EXPAND_FILL
-		tab.add_theme_font_size_override("font_size", _fs(24))
+		tab.add_theme_font_size_override("font_size", _fs(24 if GameData.is_ko() else 18))
 		var col: Color = FACTION_COLORS[fid]
 		if fid == _tab_faction:
 			tab.add_theme_stylebox_override("normal", _box(col, 18))
@@ -427,7 +433,7 @@ func _faction_page(kind: String) -> void:
 
 	if others.is_empty():
 		# 주군은 있는데 다른 애가 없을 때 "아직 없어요"라고 하면 헷갈려서 문구를 나눔
-		var none := _label("다른 멍냥이는 뽑기로 데려와요!" if lord_shown else "아직 없어요. 뽑기로 데려와요!", 26)
+		var none := _label(tr("다른 멍냥이는 뽑기로 데려와요!") if lord_shown else tr("아직 없어요. 뽑기로 데려와요!"), 26)
 		none.add_theme_color_override("font_color", SUB_COLOR)
 		list.add_child(none)
 		return
@@ -441,11 +447,11 @@ func _page_card(kind: String, dog_id: String) -> Button:
 	var dog: Dictionary = GameData.DOGS[dog_id]
 	if kind == "roster":
 		var st: int = GameState.stage_of(dog_id)
-		return _dog_card(dog_id, PuppyView.STAGE_FORM[st], "%s\n%s" % [dog["name"], GameData.stage_name(st, dog_id)],
+		return _dog_card(dog_id, PuppyView.STAGE_FORM[st], "%s\n%s" % [tr(dog["name"]), GameData.stage_name(st, dog_id)],
 			_show_raise.bind(dog_id))
 	if GameState.owns(dog_id):
 		# 도감 카드: 지금까지 키운 단계까지의 모습 (어른 그림은 어른까지 키워야 보임)
-		return _dog_card(dog_id, PuppyView.STAGE_FORM[GameState.stage_of(dog_id)], dog["name"], _show_growth.bind(dog_id))
+		return _dog_card(dog_id, PuppyView.STAGE_FORM[GameState.stage_of(dog_id)], tr(dog["name"]), _show_growth.bind(dog_id))
 	var unknown := _button("???", func() -> void: pass)
 	unknown.disabled = true
 	unknown.custom_minimum_size = Vector2(0, 230)
@@ -459,7 +465,7 @@ func _page_card(kind: String, dog_id: String) -> Button:
 ## 도감에서 누르면: 새끼 > 청년 > 어른 그림 (아직 못 키운 단계는 ???)
 func _show_growth(dog_id: String) -> void:
 	var dog: Dictionary = GameData.DOGS[dog_id]
-	_open_overlay(dog["name"], "", "home_notice")
+	_open_overlay(tr(dog["name"]), "", "home_notice")
 	overlay_log.hide()
 	var reached: int = PuppyView.STAGE_FORM[GameState.stage_of(dog_id)]
 	for form in 3:
@@ -485,7 +491,7 @@ func _show_growth(dog_id: String) -> void:
 	# 이 멍냥이 이야기가 있고 이미 봤으면: 다시 보기 버튼 (칭호 아래, 닫기 위)
 	if STORY_IDS.has(dog_id) and _story_seen(dog_id):
 		var sp: String = GameData.species(dog_id)
-		var rb := _button("%s %s 이야기 다시 보기" % [dog["name"], sp], _replay_story.bind(dog_id))
+		var rb := _button(tr("%s %s 이야기 다시 보기") % [_t((dog["name"])), _t(sp)], _replay_story.bind(dog_id))
 		rb.custom_minimum_size = Vector2(0, 76)
 		rb.add_theme_font_size_override("font_size", _fs(24))
 		var col := Color(0.55, 0.45, 0.72)
@@ -494,22 +500,29 @@ func _show_growth(dog_id: String) -> void:
 		rb.add_theme_stylebox_override("pressed", _box(col.darkened(0.15), 18))
 		overlay_extra.add_child(rb)
 	overlay_extra.show()
-	confirm_button.text = "닫기"
+	confirm_button.text = tr("닫기")
 	confirm_button.show()
 
 
 ## 칭호 꼬리표 (없으면 null). 단계별 색, 황제는 각자 이름의 왕관 꼬리표
-func _rank_tag(id: String, px: int, lv := -1) -> Control:
+func _rank_tag(id: String, px: int, lv := -1, max_w := 0) -> Control:
 	if lv < 0:
 		lv = GameState.rank_of(id)
 	if lv <= 0:
 		return null
-	if GameData.is_emperor_lv(id, lv):   # 황제: 각자 이름 + 금·빨강·검정 꼬리표
+	var rname := GameData.rank_name(id, lv)
+	var fsz := _fs(px)
+	var emperor := GameData.is_emperor_lv(id, lv)
+	if max_w > 0:   # 칸이 좁으면 글씨를 줄여서 꼬리표가 칸 안에 들어가게 (영어 황제 이름 등)
+		var f := get_theme_default_font()
+		while fsz > 10 and f and f.get_string_size(rname, HORIZONTAL_ALIGNMENT_LEFT, -1, fsz).x + fsz * (2.6 if emperor else 1.4) > max_w:
+			fsz -= 1
+	if emperor:   # 황제: 각자 이름 + 금·빨강·검정 꼬리표
 		var e = EmperorTagScript.new()
-		e.setup(GameData.rank_name(id, lv), GameData.emperor_theme(id), _fs(px))
+		e.setup(rname, GameData.emperor_theme(id), fsz)
 		return e
 	var t = ShinyTagScript.new()
-	t.setup(GameData.rank_name(id, lv), GameData.rank_color(lv), "plain", _fs(px))
+	t.setup(rname, GameData.rank_color(lv), "plain", fsz)
 	return t
 
 
@@ -524,7 +537,7 @@ func _special_tag(text: String, px: int) -> Control:
 ## 스페셜 칭호 그라데이션 색: 같은 진영이면 진한색 → 연한색 (촉: 초록 → 연두), 다르면 진영 색 → 진영 색
 func _special_colors(title: String) -> Array:
 	for sp in GameData.SPECIAL_TITLES:
-		if sp["name"] == title:
+		if sp["name"] == title or tr(sp["name"]) == title:
 			var fa: String = GameData.faction_of(sp["a"])
 			var fb: String = GameData.faction_of(sp["b"])
 			var ca: Color = FACTION_COLORS.get(fa, Color(0.86, 0.6, 0.2))
@@ -546,7 +559,7 @@ func _group_tag(text: String, px: int) -> Control:
 ## 단체 칭호 그라데이션 색: 멤버 진영이 다 같으면 진한색 → 연한색, 섞였으면 첫 진영 색 → 다른 진영 색
 func _group_colors(title: String) -> Array:
 	for g in GameData.GROUP_TITLES:
-		if g["name"] == title:
+		if g["name"] == title or tr(g["name"]) == title:
 			var facs: Array[String] = []
 			for m in g["members"]:
 				var f: String = GameData.faction_of(m)
@@ -577,12 +590,12 @@ func _rank_panel(id: String, full: bool) -> Control:
 	head.add_theme_constant_override("separation", 8)
 	head.mouse_filter = MOUSE_FILTER_IGNORE
 	if full:
-		head.add_child(_label("칭호", 26))
-	var rt := _rank_tag(id, 24 if full else 16)
+		head.add_child(_label(tr("칭호"), 26))
+	var rt := _rank_tag(id, 24 if full else 16, -1, 0 if full else 176)
 	if rt:
 		head.add_child(rt)
 	else:
-		var none := _label("아직 없어요" if full else "칭호 없음", 24 if full else 15)
+		var none := _label(tr("아직 없어요") if full else tr("칭호 없음"), 24 if full else 15)
 		none.add_theme_color_override("font_color", SUB_COLOR)
 		none.mouse_filter = MOUSE_FILTER_IGNORE
 		head.add_child(none)
@@ -598,11 +611,11 @@ func _rank_panel(id: String, full: bool) -> Control:
 	if int(rp["next"]) < 0:
 		bar.max_value = 1
 		bar.value = 1
-		num = _label("최고 칭호! (전공 %d)" % rp["exp"], 22 if full else 14)
+		num = _label(tr("최고 칭호! (전공 %d)") % _t(rp["exp"]), 22 if full else 14)
 	else:
 		bar.max_value = int(rp["next"]) - int(rp["prev"])
 		bar.value = int(rp["exp"]) - int(rp["prev"])
-		num = _label(("다음 칭호까지 %d / %d" if full else "%d / %d") % [int(rp["exp"]) - int(rp["prev"]), int(rp["next"]) - int(rp["prev"])], 22 if full else 14)
+		num = _label((tr("다음 칭호까지 %d / %d") if full else "%d / %d") % [int(rp["exp"]) - int(rp["prev"]), int(rp["next"]) - int(rp["prev"])], 22 if full else 14)
 	num.add_theme_color_override("font_color", SUB_COLOR)
 	num.mouse_filter = MOUSE_FILTER_IGNORE
 	var pad := MarginContainer.new()
@@ -614,11 +627,11 @@ func _rank_panel(id: String, full: bool) -> Control:
 	box.add_child(num)
 	# 스페셜 칭호 (도감)
 	if full:
-		var sp_head := _label("스페셜 칭호", 24)
+		var sp_head := _label(tr("스페셜 칭호"), 24)
 		box.add_child(sp_head)
 		var specials: Array = GameState.specials_of(id)
 		if specials.is_empty():
-			var hint := _label("특별한 짝꿍과 함께 대전에서 이기면 받을 수 있어요", 18)
+			var hint := _label(tr("특별한 짝꿍과 함께 대전에서 이기면 받을 수 있어요"), 18)
 			hint.add_theme_color_override("font_color", SUB_COLOR)
 			box.add_child(hint)
 		else:
@@ -632,20 +645,20 @@ func _rank_panel(id: String, full: bool) -> Control:
 		# 단체 칭호 (속한 게 있을 때만): 받았으면 반짝 태그, 아니면 몇 명 채웠는지
 		var groups: Array = GameData.groups_of(id)
 		if not groups.is_empty():
-			box.add_child(_label("단체 칭호", 24))
+			box.add_child(_label(tr("단체 칭호"), 24))
 			var gflow := HFlowContainer.new()
 			gflow.alignment = FlowContainer.ALIGNMENT_CENTER
 			gflow.add_theme_constant_override("h_separation", 10)
 			gflow.add_theme_constant_override("v_separation", 8)
 			for g in groups:
 				if GameState.group_done(g):
-					gflow.add_child(_group_tag(g["name"], 22))
+					gflow.add_child(_group_tag(tr(g["name"]), 22))
 				else:
-					var gl := _label("%s %d/%d" % [g["name"], GameState.group_count(g), (g["members"] as Array).size()], 20)
+					var gl := _label("%s %d/%d" % [tr(g["name"]), GameState.group_count(g), (g["members"] as Array).size()], 20)
 					gl.add_theme_color_override("font_color", SUB_COLOR)
 					gflow.add_child(gl)
 			box.add_child(gflow)
-			var gh := _label("멤버 모두 칭호 3단계(교위·참군) 이상이면 받아요", 16)
+			var gh := _label(tr("멤버 모두 칭호 3단계(교위·참군) 이상이면 받아요"), 16)
 			gh.add_theme_color_override("font_color", SUB_COLOR)
 			gh.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			box.add_child(gh)
@@ -727,41 +740,41 @@ func _tut_next() -> void:
 		return
 	match _tut_step:
 		0:
-			tut.show_step("삼국지 멍냥이들을 키워봐요 :)", [], false)
+			tut.show_step(tr("삼국지 멍냥이들을 키워봐요 :)"), [], false)
 		1:
 			_tut_wait = "battle"
-			tut.show_step("먼저 전투를 눌러 볼까요?\n이기면 음식을 얻어요!", [battle_button], true)
+			tut.show_step(tr("먼저 전투를 눌러 볼까요?\n이기면 음식을 얻어요!"), [battle_button], true)
 		2:
 			_tut_wait = "fed"
-			tut.show_step("얻은 음식을 줘 보세요!", [food_row], true)
+			tut.show_step(tr("얻은 음식을 줘 보세요!"), [food_row], true)
 		3:
-			tut.show_step("위는 경험치 바, 아래는 피로도 바예요.\n경험치가 차면 성장하고,\n피로도가 꽉 차면 잠을 자야 해요.", [exp_bar, fatigue_bar], false)
+			tut.show_step(tr("위는 경험치 바, 아래는 피로도 바예요.\n경험치가 차면 성장하고,\n피로도가 꽉 차면 잠을 자야 해요."), [exp_bar, fatigue_bar], false)
 		4:
-			tut.show_step("이쪽에는 이 멍냥이와 특별한 관계를 맺은 멍냥이들이 떠요!", [relation_scroll], false)
+			tut.show_step(tr("이쪽에는 이 멍냥이와 특별한 관계를 맺은 멍냥이들이 떠요!"), [relation_scroll], false)
 		5:
-			tut.show_step("이쪽에서 멍냥이들의 관계도를 볼 수 있어요!", [relation_button], false)
+			tut.show_step(tr("이쪽에서 멍냥이들의 관계도를 볼 수 있어요!"), [relation_button], false)
 		6:
-			tut.show_step("가방에서는 특별한 아이템들을 사용할 수 있어요!", [bag_button], false)
+			tut.show_step(tr("가방에서는 특별한 아이템들을 사용할 수 있어요!"), [bag_button], false)
 		7:
 			_tut_wait = "home"
-			tut.show_step("이제 홈으로 나가 볼까요?", [back_button], true)
+			tut.show_step(tr("이제 홈으로 나가 볼까요?"), [back_button], true)
 		8:
 			_tut_wait = "gacha_page"
-			tut.show_step("뽑기를 눌러 보세요!", [_home_gacha_btn], true)
+			tut.show_step(tr("뽑기를 눌러 보세요!"), [_home_gacha_btn], true)
 		9:
-			tut.show_step("여기서 새 멍냥이들을 만날 수 있어요.", [_gacha_machine], false)
+			tut.show_step(tr("여기서 새 멍냥이들을 만날 수 있어요."), [_gacha_machine], false)
 		10:
 			if GameState.give_start_bonus():
-				_gacha_ticket_label.text = "보유한 뽑기권  x%d" % GameState.tickets
+				_gacha_ticket_label.text = tr("보유한 뽑기권  x%d") % _t(GameState.tickets)
 				if not GameState.unowned().is_empty():
 					_gacha_pull.disabled = false
-					_gacha_pull.text = "뽑기"
-			tut.show_step("뽑기권 x%d 증정!" % GameData.STARTING_TICKETS, [_gacha_ticket_row], false)
+					_gacha_pull.text = tr("뽑기")
+			tut.show_step(tr("뽑기권 x%d 증정!") % _t(GameData.STARTING_TICKETS), [_gacha_ticket_row], false)
 		11:
 			_tut_wait = "gacha_done"
-			tut.show_step("뽑기를 눌러 볼까요?", [_gacha_pull], true)
+			tut.show_step(tr("뽑기를 눌러 볼까요?"), [_gacha_pull], true)
 		12:
-			tut.show_step("열심히 멍냥이들을 키워\n모든 삼국지 멍냥이들을 만나봅시다 :)", [], false)
+			tut.show_step(tr("열심히 멍냥이들을 키워\n모든 삼국지 멍냥이들을 만나봅시다 :)"), [], false)
 
 
 ## 튜토리얼이 기다리던 행동이 일어나면 다음 단계로
@@ -772,9 +785,9 @@ func _tut_event(what: String) -> void:
 
 ## 초기화 경고창
 func _ask_reset() -> void:
-	_open_overlay("초기화", "모든 멍냥이·아이템·칭호가 사라지고\n최신 버전으로 처음 튜토리얼부터 다시 시작해요.\n초기화 하시겠습니까?", "reset_confirm")
+	_open_overlay(tr("초기화"), tr("모든 멍냥이·아이템·칭호가 사라지고\n최신 버전으로 처음 튜토리얼부터 다시 시작해요.\n초기화 하시겠습니까?"), "reset_confirm")
 	var red := Color(0.86, 0.32, 0.32)
-	confirm_button.text = "초기화"
+	confirm_button.text = tr("초기화")
 	confirm_button.add_theme_stylebox_override("normal", _box(red, 18))
 	confirm_button.add_theme_stylebox_override("hover", _box(red.lightened(0.1), 18))
 	confirm_button.add_theme_stylebox_override("pressed", _box(red.darkened(0.15), 18))
@@ -799,7 +812,7 @@ func _do_reset() -> void:
 				f => fetch(f, {cache: 'reload'}).catch(() => null)
 			)).finally(() => location.reload()), 1500);
 		""", true)
-		_open_overlay("초기화 중..", "최신 버전을 받아오고 있어요.\n잠시만 기다려 주세요!", "notice")
+		_open_overlay(tr("초기화 중.."), tr("최신 버전을 받아오고 있어요.\n잠시만 기다려 주세요!"), "notice")
 		return
 	_show_home()
 	_tut_start()
@@ -813,7 +826,7 @@ func _show_photo() -> void:
 	_photo_ui = []
 	_photo_cards = {}
 	var header_start := v.get_child_count()
-	_page_header(v, "← 홈", _show_home, "사진 찍기")
+	_page_header(v, tr("← 홈"), _show_home, tr("사진 찍기"))
 	_photo_ui.append(v.get_child(header_start))
 
 	_photo_stage = PhotoStageScript.new()
@@ -821,6 +834,7 @@ func _show_photo() -> void:
 	_photo_stage.size_flags_horizontal = SIZE_EXPAND_FILL
 	_photo_stage.title = _photo_title
 	_photo_stage.bg = _photo_bg
+	_photo_stage.heart = _photo_heart
 	v.add_child(_photo_stage)
 
 	# 사진 아래 글씨 고치기
@@ -830,7 +844,7 @@ func _show_photo() -> void:
 	_photo_ui.append(title_row)
 	var edit := LineEdit.new()
 	edit.text = _photo_title
-	edit.placeholder_text = "사진에 넣을 글씨"
+	edit.placeholder_text = tr("사진에 넣을 글씨")
 	edit.max_length = 16
 	edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	edit.clear_button_enabled = true
@@ -869,6 +883,19 @@ func _show_photo() -> void:
 		sw.pressed.connect(_on_photo_bg.bind(i))
 		title_row.add_child(sw)
 		_photo_bg_btns.append(sw)
+	# 하트 켜기/끄기 (두 마리 사진 가운데 하트)
+	var hb := Button.new()
+	hb.text = "♥"
+	hb.custom_minimum_size = Vector2(52, 56)
+	hb.focus_mode = Control.FOCUS_NONE
+	hb.add_theme_font_size_override("font_size", _fs(26))
+	hb.tooltip_text = tr("하트")
+	hb.pressed.connect(func() -> void:
+		_photo_heart = not _photo_heart
+		_photo_stage.heart = _photo_heart
+		_style_heart_toggle(hb))
+	_style_heart_toggle(hb)
+	title_row.add_child(hb)
 
 	# 표정 고르기: 고른 멍냥이마다 한 줄씩 (이름 + 표정 버튼)
 	_photo_expr_box = VBoxContainer.new()
@@ -896,7 +923,7 @@ func _show_photo() -> void:
 	grid.child_entered_tree.connect(_pass_buttons)   # 카드 위를 끌어도 스크롤
 	for fid in GameData.faction_order():
 		for id in GameState.owned_in(fid):
-			var card := _dog_card(id, PuppyView.STAGE_FORM[GameState.stage_of(id)], GameData.DOGS[id]["name"], _on_photo_pick.bind(id))
+			var card := _dog_card(id, PuppyView.STAGE_FORM[GameState.stage_of(id)], tr(GameData.DOGS[id]["name"]), _on_photo_pick.bind(id))
 			card.custom_minimum_size = Vector2(0, 150)
 			card.add_theme_constant_override("icon_max_width", 92)
 			card.add_theme_font_size_override("font_size", _fs(20))
@@ -907,14 +934,14 @@ func _show_photo() -> void:
 	row.add_theme_constant_override("separation", 12)
 	v.add_child(row)
 	_photo_ui.append(row)
-	var shoot := _button("찰칵!", _photo_capture_mode)
+	var shoot := _button(tr("찰칵!"), _photo_capture_mode)
 	shoot.custom_minimum_size = Vector2(0, 100)
 	shoot.size_flags_horizontal = SIZE_EXPAND_FILL
 	shoot.add_theme_stylebox_override("normal", _box(PINK, 18))
 	shoot.add_theme_stylebox_override("hover", _box(PINK.lightened(0.1), 18))
 	shoot.add_theme_stylebox_override("pressed", _box(PINK.darkened(0.15), 18))
 	row.add_child(shoot)
-	var save := _button("사진 저장", _save_photo)
+	var save := _button(tr("사진 저장"), _save_photo)
 	save.custom_minimum_size = Vector2(0, 100)
 	save.size_flags_horizontal = SIZE_EXPAND_FILL
 	row.add_child(save)
@@ -940,7 +967,7 @@ func _on_photo_pick(id: String) -> void:
 
 ## 웹: 브라우저 입력창(prompt)으로 글씨 받기 - 폰 키보드·한글 입력이 정상으로 됨
 func _photo_prompt_title(edit: LineEdit) -> void:
-	var js := "prompt(%s, %s)" % [JSON.stringify("사진에 넣을 글씨 (16자까지)"), JSON.stringify(_photo_title)]
+	var js := "prompt(%s, %s)" % [JSON.stringify(tr("사진에 넣을 글씨 (16자까지)")), JSON.stringify(_photo_title)]
 	var r = JavaScriptBridge.eval(js, true)
 	if r == null:
 		return   # 취소
@@ -968,6 +995,16 @@ func _on_photo_expr(id: String, e: String) -> void:
 	_photo_refresh()
 
 
+## 하트 버튼 모양: 켜짐 = 분홍 하트, 꺼짐 = 회색 하트
+func _style_heart_toggle(hb: Button) -> void:
+	var on := _photo_heart
+	var fg := Color(0.95, 0.42, 0.55) if on else Color(0.72, 0.68, 0.64)
+	for st in ["normal", "hover", "pressed", "focus"]:
+		hb.add_theme_stylebox_override(st, _card_box(Color(1, 0.98, 0.94), PINK.darkened(0.1) if on else Color(0.86, 0.75, 0.66), 5 if on else 2))
+	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		hb.add_theme_color_override(c, fg)
+
+
 ## 고른 멍냥이·표정을 무대와 버튼에 반영
 func _photo_refresh() -> void:
 	var list: Array = []
@@ -984,8 +1021,8 @@ func _photo_refresh() -> void:
 		var line := HBoxContainer.new()
 		line.add_theme_constant_override("separation", 5)
 		_photo_expr_box.add_child(line)
-		var nm := _label("%d %s" % [i + 1, GameData.DOGS[id]["name"]], 18)
-		nm.custom_minimum_size = Vector2(90, 0)
+		var nm := _label("%d %s" % [i + 1, tr(GameData.DOGS[id]["name"])], 18 if GameData.is_ko() else 14)
+		nm.custom_minimum_size = Vector2(90 if GameData.is_ko() else 118, 0)
 		nm.clip_text = true
 		nm.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		line.add_child(nm)
@@ -1008,7 +1045,7 @@ func _photo_refresh() -> void:
 			var b := _button(e, _on_photo_expr.bind(id, e))
 			b.custom_minimum_size = Vector2(0, 52)
 			b.size_flags_horizontal = SIZE_EXPAND_FILL
-			b.add_theme_font_size_override("font_size", _fs(16))
+			b.add_theme_font_size_override("font_size", _fs(16 if GameData.is_ko() else 14))
 			var col := PINK if e == cur else Color(0.86, 0.52, 0.32)
 			b.add_theme_stylebox_override("normal", _box(col, 12))
 			b.add_theme_stylebox_override("hover", _box(col.lightened(0.1), 12))
@@ -1023,7 +1060,7 @@ func _photo_refresh() -> void:
 	for id in _photo_cards:
 		var card: Button = _photo_cards[id]
 		var idx := _photo_sel.find(id)
-		var name_s: String = GameData.DOGS[id]["name"]
+		var name_s: String = tr(GameData.DOGS[id]["name"])
 		card.text = name_s if idx < 0 else "%d · %s" % [idx + 1, name_s]
 		var border := PINK if idx >= 0 else Color(0.86, 0.52, 0.32)
 		var width := 7 if idx >= 0 else 4
@@ -1047,7 +1084,7 @@ func _photo_capture_mode() -> void:
 	catcher.set_anchors_preset(PRESET_FULL_RECT)
 	catcher.mouse_filter = MOUSE_FILTER_STOP
 	add_child(catcher)
-	var hint := _label("화면을 누르면 돌아가요", 20)
+	var hint := _label(tr("화면을 누르면 돌아가요"), 20)
 	hint.add_theme_color_override("font_color", SUB_COLOR)
 	catcher.add_child(hint)
 	hint.set_anchors_and_offsets_preset(PRESET_CENTER_BOTTOM, PRESET_MODE_MINSIZE, 30)
@@ -1074,14 +1111,14 @@ func _save_photo() -> void:
 	var stamp := Time.get_datetime_string_from_system().replace(":", "").replace("-", "").replace("T", "_")
 	if OS.has_feature("web"):
 		JavaScriptBridge.download_buffer(shot.save_png_to_buffer(), "mengnyang_%s.png" % stamp, "image/png")
-		_open_overlay("사진 저장", "사진을 내려받았어요!", "home_notice")
+		_open_overlay(tr("사진 저장"), tr("사진을 내려받았어요!"), "home_notice")
 	else:
 		var dir := OS.get_system_dir(OS.SYSTEM_DIR_PICTURES)
 		if dir == "":
 			dir = OS.get_user_data_dir()
-		var path := dir.path_join("멍냥이사진_%s.png" % stamp)
+		var path := dir.path_join(tr("멍냥이사진_%s.png") % _t(stamp))
 		var err := shot.save_png(path)
-		_open_overlay("사진 저장", ("사진을 저장했어요!\n%s" % path) if err == OK else "저장하지 못했어요..", "home_notice")
+		_open_overlay(tr("사진 저장"), (tr("사진을 저장했어요!\n%s") % _t(path)) if err == OK else tr("저장하지 못했어요.."), "home_notice")
 	confirm_button.show()
 	_log("사진 저장")
 
@@ -1118,7 +1155,7 @@ func _show_gacha() -> void:
 	_log("뽑기 화면")
 	_gacha_busy = false
 	var v := _new_page()
-	_page_header(v, "← 홈", _show_home, "뽑기")
+	_page_header(v, tr("← 홈"), _show_home, tr("뽑기"))
 
 	var ticket_row := HBoxContainer.new()
 	ticket_row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -1130,7 +1167,7 @@ func _show_gacha() -> void:
 	ticket_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	ticket_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	ticket_row.add_child(ticket_icon)
-	_gacha_ticket_label = _label("보유한 뽑기권  x%d" % GameState.tickets, 34)
+	_gacha_ticket_label = _label(tr("보유한 뽑기권  x%d") % _t(GameState.tickets), 34)
 	ticket_row.add_child(_gacha_ticket_label)
 	_gacha_ticket_row = ticket_row
 
@@ -1159,12 +1196,12 @@ func _show_gacha() -> void:
 			_gacha_lever = t
 
 	var left: int = GameState.unowned().size()
-	var hint := _label("아직 못 만난 멍냥이 %d마리 중 한 마리가 찾아와요" % left if left > 0 else "모든 멍냥이를 다 모았어요!", 24)
+	var hint := _label(tr("아직 못 만난 멍냥이 %d마리 중 한 마리가 찾아와요") % _t(left) if left > 0 else tr("모든 멍냥이를 다 모았어요!"), 24)
 	hint.add_theme_color_override("font_color", SUB_COLOR)
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(hint)
 
-	var pull := _button("뽑기", _on_gacha)
+	var pull := _button(tr("뽑기"), _on_gacha)
 	_gacha_pull = pull
 	pull.custom_minimum_size = Vector2(0, 120)
 	pull.add_theme_font_size_override("font_size", _fs(40))
@@ -1172,10 +1209,10 @@ func _show_gacha() -> void:
 	pull.add_theme_stylebox_override("hover", _box(PINK.lightened(0.1), 18))
 	pull.add_theme_stylebox_override("pressed", _box(PINK.darkened(0.15), 18))
 	if left <= 0:
-		pull.text = "다 모았어요!"
+		pull.text = tr("다 모았어요!")
 		pull.disabled = true
 	elif GameState.tickets <= 0:
-		pull.text = "뽑기권이 없어요"
+		pull.text = tr("뽑기권이 없어요")
 		pull.disabled = true     # 회색
 	v.add_child(pull)
 	_tut_event("gacha_page")
@@ -1201,7 +1238,7 @@ func _on_gacha() -> void:
 
 	var id: String = GameState.draw_gacha()
 	_log("뽑기: " + id)
-	_open_overlay("두근두근...", "", "gacha")
+	_open_overlay(tr("두근두근..."), "", "gacha")
 	overlay_image.texture = FoodIcon.item_texture("capsule" + _gacha_theme())
 	overlay_image.show()
 	overlay_image.pivot_offset = overlay_image.custom_minimum_size / 2
@@ -1214,15 +1251,14 @@ func _on_gacha() -> void:
 
 	var dog: Dictionary = GameData.DOGS[id]
 	var sp: String = GameData.species(id)
-	overlay_title.text = "%s %s%s 찾아왔어요!" % [dog["name"], sp, _ig(sp)]
+	overlay_title.text = tr("%s %s%s 찾아왔어요!") % [_t((dog["name"])), _t(sp), _t(_ig(sp))]
 	overlay_image.texture = _dog_tex(id, 0)
 	overlay_image.scale = Vector2(0.2, 0.2)
 	overlay_image.create_tween().tween_property(overlay_image, "scale", Vector2.ONE, 0.25) \
 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	overlay_log.text = "%s 진영 · %s" % [GameData.FACTIONS[GameData.faction_of(id)]["name"],
-		"책사" if GameData.is_strategist(id) else ("군주" if GameData.is_lord(id) else "무장")]
+	overlay_log.text = tr("%s 진영 · %s") % [_t((GameData.FACTIONS[GameData.faction_of(id)]["name"])), _t(("책사") if GameData.is_strategist(id) else (tr("군주") if GameData.is_lord(id) else tr("무장")))]
 	celebration.play("", "", overlay_image.global_position + overlay_image.size / 2 - celebration.global_position)
-	confirm_button.text = "반가워!"
+	confirm_button.text = tr("반가워!")
 	confirm_button.show()
 
 
@@ -1237,7 +1273,7 @@ func _build_raise_screen() -> void:
 
 	var header := HBoxContainer.new()
 	v.add_child(header)
-	back_button = _button("← 목록", _on_back)
+	back_button = _button(tr("← 목록"), _on_back)
 	back_button.custom_minimum_size = Vector2(150, 70)
 	back_button.add_theme_font_size_override("font_size", _fs(24))
 	_quiet_button(back_button)
@@ -1262,7 +1298,7 @@ func _build_raise_screen() -> void:
 	var exp_row := HBoxContainer.new()
 	exp_row.add_theme_constant_override("separation", 12)
 	v.add_child(exp_row)
-	exp_name = _label("경험치", 22)
+	exp_name = _label(tr("경험치"), 22)
 	exp_name.custom_minimum_size = Vector2(100, 0)
 	exp_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	exp_row.add_child(exp_name)
@@ -1280,7 +1316,7 @@ func _build_raise_screen() -> void:
 	var fatigue_row := HBoxContainer.new()
 	fatigue_row.add_theme_constant_override("separation", 12)
 	v.add_child(fatigue_row)
-	fatigue_label = _label("피로도", 22)
+	fatigue_label = _label(tr("피로도"), 22)
 	fatigue_label.custom_minimum_size = Vector2(100, 0)
 	fatigue_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	fatigue_row.add_child(fatigue_label)
@@ -1352,7 +1388,7 @@ func _build_raise_screen() -> void:
 		icon.food_id = food_id
 		icon.custom_minimum_size = Vector2(0, 72)
 		box.add_child(icon)
-		var name_label := _label(GameData.FOODS[food_id]["name"], 24)
+		var name_label := _label(tr(GameData.FOODS[food_id]["name"]), 24)
 		name_label.add_theme_color_override("font_color", Color.WHITE)
 		name_label.mouse_filter = MOUSE_FILTER_IGNORE
 		box.add_child(name_label)
@@ -1375,13 +1411,13 @@ func _build_raise_screen() -> void:
 	var bottom := HBoxContainer.new()
 	bottom.add_theme_constant_override("separation", 10)
 	v.add_child(bottom)
-	battle_button = _button("전투", _on_battle)
+	battle_button = _button(tr("전투"), _on_battle)
 	battle_button.custom_minimum_size = Vector2(0, 110)
 	battle_button.add_theme_font_size_override("font_size", 30)
 	battle_button.size_flags_horizontal = SIZE_EXPAND_FILL
 	battle_button.size_flags_stretch_ratio = 1.6
 	bottom.add_child(battle_button)
-	bag_button = _button("가방", _open_bag)
+	bag_button = _button(tr("가방"), _open_bag)
 	_set_button_icon(bag_button, "item_pouch")
 	bag_button.add_theme_constant_override("icon_max_width", 48)
 	bag_button.custom_minimum_size = Vector2(0, 110)
@@ -1389,7 +1425,7 @@ func _build_raise_screen() -> void:
 	bag_button.size_flags_horizontal = SIZE_EXPAND_FILL
 	_quiet_button(bag_button)   # 가방은 보조 버튼 (전투가 주요 버튼)
 	bottom.add_child(bag_button)
-	sleep_button = _button("잠자기", _on_sleep)
+	sleep_button = _button(tr("잠자기"), _on_sleep)
 	_set_button_icon(sleep_button, "icon_sleep")
 	sleep_button.add_theme_constant_override("icon_max_width", 48)
 	sleep_button.custom_minimum_size = Vector2(0, 110)
@@ -1417,7 +1453,7 @@ func _show_raise(dog_id: String) -> void:
 	_bind_puppy(GameState.get_puppy(dog_id))
 
 	var dog: Dictionary = GameData.DOGS[dog_id]
-	title_label.text = dog["name"]
+	title_label.text = tr(dog["name"])
 	for c in title_tag.get_children():
 		c.queue_free()
 	var rt := _rank_tag(dog_id, 22)
@@ -1429,7 +1465,7 @@ func _show_raise(dog_id: String) -> void:
 	puppy_view.stage = puppy.stage
 	puppy_view.sleeping = false
 	busy = false
-	_show_msg("너무 피곤해.." if puppy.is_exhausted() else "%s %s랑 놀자!" % [dog["name"], GameData.species(dog_id)])
+	_show_msg(tr("너무 피곤해..") if puppy.is_exhausted() else tr("%s %s랑 놀자!") % [_t((dog["name"])), _t(GameData.species(dog_id))])
 	_refresh()
 	GameState.save_game()
 
@@ -1450,7 +1486,7 @@ func _refresh() -> void:
 	if puppy.is_adult():
 		exp_bar.max_value = 1
 		exp_bar.value = 1
-		exp_name.text = "친밀도"
+		exp_name.text = tr("친밀도")
 		exp_label.text = str(puppy.affection)
 	else:
 		var lo: int = GameData.STAGE_EXP[stage]
@@ -1458,7 +1494,7 @@ func _refresh() -> void:
 		exp_bar.max_value = hi
 		exp_bar.min_value = lo
 		exp_bar.value = puppy.total_exp
-		exp_name.text = "경험치"
+		exp_name.text = tr("경험치")
 		exp_label.text = "%d / %d" % [puppy.total_exp, hi]
 
 	var exhausted := puppy.is_exhausted()
@@ -1483,7 +1519,7 @@ func _refresh() -> void:
 		gain.add_theme_color_override("font_color", SUB_COLOR if locked else Color(1, 1, 1, 0.85))
 		badge.text = str(count)
 		badge.visible = count > 0
-		gain.text = "친밀도+1" if puppy.is_adult() else "+%d exp" % GameData.FOODS[food_id]["exp"]
+		gain.text = tr("친밀도+1") if puppy.is_adult() else "+%d exp" % GameData.FOODS[food_id]["exp"]
 		(ui["icon"] as FoodIcon).food_id = GameData.food_icon_id(food_id, puppy.dog_id)
 		(ui["name"] as Label).text = GameData.food_name(food_id, puppy.dog_id)
 	battle_button.disabled = busy or exhausted
@@ -1491,20 +1527,20 @@ func _refresh() -> void:
 	relation_button.disabled = busy
 	_update_relations()
 	sleep_button.disabled = busy or puppy.fatigue <= 0
-	sleep_button.text = "잠자기!!" if exhausted else "잠자기"
+	sleep_button.text = tr("잠자기!!") if exhausted else tr("잠자기")
 	var items := 0
 	for item_id in GameData.ITEM_ORDER:
 		items += GameState.item_count(item_id)
-	bag_button.text = "가방 %d" % items if items > 0 else "가방"
+	bag_button.text = tr("가방 %d") % _t(items) if items > 0 else tr("가방")
 	bag_button.disabled = busy
 	back_button.disabled = busy
 
 
 ## 네잎클로버 효과 중이면 전투 버튼이 초록 클로버 색 + 남은 횟수
 func _style_battle_button() -> void:
-	var base_text := "책략 내기" if GameData.is_strategist(puppy.dog_id) else "전투"
+	var base_text := tr("책략 내기") if GameData.is_strategist(puppy.dog_id) else tr("전투")
 	if GameState.luck > 0:
-		battle_button.text = "%s\n클로버 %d번" % [base_text, GameState.luck]
+		battle_button.text = tr("%s\n클로버 %d번") % [_t(base_text), _t(GameState.luck)]
 		var green := Color(0.36, 0.66, 0.36)
 		battle_button.add_theme_stylebox_override("normal", _clover_box(green))
 		battle_button.add_theme_stylebox_override("hover", _clover_box(green.lightened(0.1)))
@@ -1542,11 +1578,11 @@ func _on_feed(food_id: String) -> void:
 	puppy.add_fatigue(GameData.FATIGUE_PER_FOOD)
 	puppy_view.eat(GameData.food_icon_id(food_id, puppy.dog_id), GameData.EAT_ANIM_SECONDS)
 	if puppy.is_exhausted():
-		_show_msg("배불러... 너무 피곤해..")
+		_show_msg(tr("배불러... 너무 피곤해.."))
 	elif puppy.stage != stage_before:
 		pass  # "성장했다!" 메시지 유지
 	else:
-		_show_msg("%s 냠냠 %s" % [GameData.food_name(food_id, puppy.dog_id), "친밀도 +1" if puppy.is_adult() else "+%d exp" % food["exp"]])
+		_show_msg(tr("%s 냠냠 %s") % [_t(GameData.food_name(food_id, puppy.dog_id)), _t(("친밀도 +1") if puppy.is_adult() else "+%d exp" % food["exp"])])
 	_after_action()
 	_tut_event("fed")
 
@@ -1556,7 +1592,7 @@ func _on_petted() -> void:
 	if puppy == null:
 		return
 	if puppy_view.sleeping:
-		_show_msg("음냐음냐..")
+		_show_msg(tr("음냐음냐.."))
 		return
 	var now := Time.get_ticks_msec()
 	var gap := (now - _last_pet_ms) / 1000.0
@@ -1577,11 +1613,11 @@ func _on_petted() -> void:
 				puppy.affection += 1
 			_show_msg(CAT_PET_MESSAGES.pick_random())
 		if puppy.is_exhausted():
-			_show_msg(message_label.text + "\n너무 피곤해..")
+			_show_msg(message_label.text + tr("\n너무 피곤해.."))
 	else:
 		# 강아지: 아주 조금 회복. 단, 피로도가 꽉 찼으면 잠을 자야만 풀림
 		if puppy.is_exhausted():
-			_show_msg("졸려... 쓰담쓰담 좋아... 그래도 자야 해")
+			_show_msg(tr("졸려... 쓰담쓰담 좋아... 그래도 자야 해"))
 		else:
 			puppy.add_fatigue(-GameData.PET_DOG_RELIEF)
 			if puppy.is_adult():
@@ -1603,10 +1639,10 @@ func _after_action() -> void:
 		_pending_gift = {}
 		_set_busy(true)
 		await get_tree().create_timer(Celebration.BANNER_HOLD + 0.4).timeout
-		_open_overlay("선물이 왔어요!", gift["text"], "gift")
+		_open_overlay(tr("선물이 왔어요!"), tr(gift["text"]), "gift")
 		overlay_image.texture = FoodIcon.item_texture("ticket")
 		overlay_image.show()
-		confirm_button.text = "고마워!"
+		confirm_button.text = tr("고마워!")
 		confirm_button.show()
 		_set_busy(true)
 	elif puppy and puppy.dog_id == "sima_yi":
@@ -1621,12 +1657,12 @@ func _on_sleep() -> void:
 	_set_busy(true)
 	puppy_view.tired = false
 	puppy_view.sleeping = true
-	_show_msg("쿨쿨...")
+	_show_msg(tr("쿨쿨..."))
 	await get_tree().create_timer(GameData.SLEEP_SECONDS).timeout
 	puppy_view.sleeping = false
 	puppy.rest()
 	GameState.save_game()
-	_show_msg("잘 잤다!")
+	_show_msg(tr("잘 잤다!"))
 	_log("잠 끝")
 	_set_busy(false)
 
@@ -1634,45 +1670,54 @@ func _on_sleep() -> void:
 func _on_stage_changed(stage: int) -> void:
 	_log("성장: %d" % stage)
 	puppy_view.stage = stage
-	var dog_name: String = GameData.DOGS[puppy.dog_id]["name"]
+	var dog_name: String = tr(GameData.DOGS[puppy.dog_id]["name"])
 	var sp: String = GameData.species(puppy.dog_id)
 	var stage_name: String = GameData.stage_name(stage, puppy.dog_id)
-	_show_msg("%s%s 됐다!" % [stage_name, _ig(stage_name)])
+	_show_msg(tr("%s%s 됐다!") % [_t(stage_name), _t(_ig(stage_name))])
 	puppy_view.bounce()
 	var center := puppy_view.global_position + puppy_view.size / 2 - celebration.global_position
 	if puppy.is_adult():
 		# "유비 강아지가 / 어른강아지가 되었어요!" → 폭죽 끝나면 선물 창
-		celebration.play("%s %s%s" % [dog_name, sp, _ig(sp)], "%s%s 되었어요!" % [stage_name, _ig(stage_name)], center)
+		celebration.play("%s %s%s" % [dog_name, sp, _ig(sp)], tr("%s%s 되었어요!") % [_t(stage_name), _t(_ig(stage_name))], center)
 		var got: int = GameState.grant_adult_reward(puppy.dog_id)
 		if got > 0:
-			_pending_gift = {"text": "%s %s%s 선물을 물어왔어요!\n\n뽑기권 x%d" % [dog_name, sp, _ig(sp), got]}
+			_pending_gift = {"text": tr("%s %s%s 선물을 물어왔어요!\n\n뽑기권 x%d") % [_t(dog_name), _t(sp), _t(_ig(sp)), _t(got)]}
 		var extra := _adult_unlock_notes(puppy.dog_id)
 		if extra != "":
 			if _pending_gift.is_empty():
-				_pending_gift = {"text": "%s%s 어른이 되면서..." % [dog_name, _ig(dog_name)] + extra}
+				_pending_gift = {"text": tr("%s%s 어른이 되면서...") % [_t(dog_name), _t(_ig(dog_name))] + extra}
 			else:
 				_pending_gift["text"] += extra
 		# 크면 풀리는 앙숙: 화해 알림
 		for other in GameState.owned:
 			var m: String = GameData.grow_out_by(puppy.dog_id, other)
 			if (m == puppy.dog_id or m == "both") and GameData.reconciled(puppy.dog_id, other):
-				var other_name: String = GameData.DOGS[other]["name"]
-				var note := "\n\n%s%s 화해했어요! 이제 친해질 수 있어요" % [other_name, _rang(other_name)]
+				var other_name: String = tr(GameData.DOGS[other]["name"])
+				var note := tr("\n\n%s%s 화해했어요! 이제 친해질 수 있어요") % [_t(other_name), _t(_rang(other_name))]
 				if _pending_gift.is_empty():
-					_pending_gift = {"text": "%s%s 어른이 되면서..." % [dog_name, _ig(dog_name)] + note}
+					_pending_gift = {"text": tr("%s%s 어른이 되면서...") % [_t(dog_name), _t(_ig(dog_name))] + note}
 				else:
 					_pending_gift["text"] += note
 	else:
-		celebration.play("%s %s%s 성장했어요!" % [dog_name, sp, _ig(sp)], "%s%s 됐어요" % [stage_name, _ig(stage_name)], center)
+		celebration.play(tr("%s %s%s 성장했어요!") % [_t(dog_name), _t(sp), _t(_ig(sp))], tr("%s%s 됐어요") % [_t(stage_name), _t(_ig(stage_name))], center)
 
 
 ## 받침 있으면 "이", 없으면 "가"
+## 번역: 문자열이면 tr(), 숫자 등은 그대로 (서식 문자열 % 인자용)
+func _t(v: Variant) -> Variant:
+	return tr(v) if v is String else v
+
+
 func _ig(word: String) -> String:
+	if not GameData.is_ko():
+		return ""
 	return "이" if _has_batchim(word) else "가"
 
 
 ## 받침 있으면 "이랑", 없으면 "랑"
 func _rang(word: String) -> String:
+	if not GameData.is_ko():
+		return ""
 	return "이랑" if _has_batchim(word) else "랑"
 
 
@@ -1706,46 +1751,46 @@ func _on_battle() -> void:
 
 
 func _run_battle() -> void:
-	var me: String = GameData.DOGS[puppy.dog_id]["name"]
+	var me: String = tr(GameData.DOGS[puppy.dog_id]["name"])
 	var enemy: String = ENEMIES.pick_random()
-	_open_overlay("전투!", "%s 등장!" % enemy, "battle")
+	_open_overlay(tr("전투!"), tr("%s 등장!") % _t(enemy), "battle")
 	var win_rate: float = GameData.BATTLE_BASE_WIN_RATE + puppy.stage * GameData.BATTLE_WIN_RATE_PER_STAGE
 	var win: bool = randf() < win_rate
 	for i in 3:
 		await get_tree().create_timer(GameData.BATTLE_LINE_SECONDS).timeout
 		var attacker: String = me if i % 2 == 0 else enemy
-		overlay_log.text += "\n%s의 %s!" % [attacker, BATTLE_MOVES.pick_random()]
+		overlay_log.text += tr("\n%s의 %s!") % [_t(attacker), _t(BATTLE_MOVES.pick_random())]
 	await get_tree().create_timer(GameData.BATTLE_LINE_SECONDS).timeout
 	var drops: Array[String] = GameData.roll_drops(GameData.BATTLE_WIN_DROPS if win else GameData.BATTLE_LOSE_DROPS)
 	puppy.add_foods(drops)
 	_log("전투 결과: %s" % [drops])
-	overlay_log.text += "\n\n" + ("승리! 적이 군량을 두고 도망쳤다" if win else "졌다... 그래도 뭔가 주워왔다")
+	overlay_log.text += "\n\n" + (tr("승리! 적이 군량을 두고 도망쳤다") if win else tr("졌다... 그래도 뭔가 주워왔다"))
 	_show_drops(drops, _roll_special())
 	confirm_button.show()
 
 
 func _start_strategy() -> void:
-	var text := "상대 책사 고양이가 수를 고민하고 있다...\n\n화공 > 매복 > 이간 > 화공"
-	_open_overlay("책략 내기", text, "battle")
+	var text := tr("상대 책사 고양이가 수를 고민하고 있다...\n\n화공 > 매복 > 이간 > 화공")
+	_open_overlay(tr("책략 내기"), text, "battle")
 	strategy_box.show()
 
 
 func _on_strategy(pick: int) -> void:
 	strategy_box.hide()
 	var enemy_pick := randi() % STRATEGIES.size()
-	overlay_log.text = "나: %s   vs   상대: %s" % [STRATEGIES[pick], STRATEGIES[enemy_pick]]
+	overlay_log.text = tr("나: %s   vs   상대: %s") % [_t(STRATEGIES[pick]), _t(STRATEGIES[enemy_pick])]
 	await get_tree().create_timer(GameData.BATTLE_LINE_SECONDS * 2).timeout
 	var amount: Vector2i
 	var result: String
 	if pick == enemy_pick:
 		amount = GameData.STRATEGY_DRAW_DROPS
-		result = "비겼다! 서로 군량을 나눠 가졌다"
+		result = tr("비겼다! 서로 군량을 나눠 가졌다")
 	elif enemy_pick == (pick + 1) % STRATEGIES.size():
 		amount = GameData.STRATEGY_WIN_DROPS
-		result = "계략 성공! 적 군량고를 털었다"
+		result = tr("계략 성공! 적 군량고를 털었다")
 	else:
 		amount = GameData.STRATEGY_LOSE_DROPS
-		result = "간파당했다... 겨우 하나 챙겼다"
+		result = tr("간파당했다... 겨우 하나 챙겼다")
 	var drops: Array[String] = GameData.roll_drops(amount)
 	puppy.add_foods(drops)
 	overlay_log.text += "\n\n" + result
@@ -1759,11 +1804,11 @@ func _roll_special() -> String:
 	if lucky:
 		GameState.luck -= 1
 		GameState.save_game()
-		overlay_log.text += "\n(네잎클로버 효과! 남은 %d번)" % GameState.luck
+		overlay_log.text += tr("\n(네잎클로버 효과! 남은 %d번)") % _t(GameState.luck)
 	var sp: String = GameData.roll_special(lucky)
 	if sp != "":
 		GameState.add_item(sp)
-		overlay_log.text += "\n\n★ 희귀템 발견! %s ★" % GameData.ITEMS[sp]["name"]
+		overlay_log.text += tr("\n\n★ 희귀템 발견! %s ★") % _t((GameData.ITEMS[sp]["name"]))
 		_log("희귀템: " + sp)
 	return sp
 
@@ -1808,7 +1853,7 @@ func _fill_bag() -> void:
 	for c in bag_list.get_children():
 		c.queue_free()
 	if GameState.luck > 0:
-		var luck_l := _label("네잎클로버 효과 중!  남은 전투·책략 %d번" % GameState.luck, 24)
+		var luck_l := _label(tr("네잎클로버 효과 중!  남은 전투·책략 %d번") % _t(GameState.luck), 24)
 		luck_l.add_theme_color_override("font_color", Color(0.25, 0.55, 0.25))
 		bag_list.add_child(luck_l)
 	for item_id in GameData.ITEM_ORDER:
@@ -1825,7 +1870,7 @@ func _fill_bag() -> void:
 		info.size_flags_horizontal = SIZE_EXPAND_FILL
 		info.alignment = BoxContainer.ALIGNMENT_CENTER
 		h.add_child(info)
-		var name_l := _label("%s  x%d" % [item["name"], count], 28)
+		var name_l := _label("%s  x%d" % [tr(item["name"]), count], 28)
 		name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		info.add_child(name_l)
 		var desc := _label(item["desc"], 20)
@@ -1833,7 +1878,7 @@ func _fill_bag() -> void:
 		desc.add_theme_color_override("font_color", SUB_COLOR)
 		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		info.add_child(desc)
-		var use := _button("쓰기", _use_item.bind(item_id))
+		var use := _button(tr("쓰기"), _use_item.bind(item_id))
 		use.custom_minimum_size = Vector2(110, 70)
 		use.size_flags_vertical = SIZE_SHRINK_CENTER
 		use.disabled = count <= 0 or _item_block_reason(item_id) != ""
@@ -1846,7 +1891,7 @@ func _item_block_reason(item_id: String) -> String:
 	match item_id:
 		"ginseng":
 			if puppy.fatigue <= 0:
-				return "피곤하지 않아요"
+				return tr("피곤하지 않아요")
 	return ""
 
 
@@ -1857,36 +1902,36 @@ func _use_item(item_id: String) -> void:
 	match item_id:
 		"ginseng":
 			puppy.rest()
-			_show_msg("산삼 냠냠! 기운이 펄펄!")
+			_show_msg(tr("산삼 냠냠! 기운이 펄펄!"))
 		"peach":
 			if puppy.is_adult():
 				puppy.affection += GameData.PEACH_EXP
-				_show_msg("천도복숭아 냠냠! 친밀도 +%d" % GameData.PEACH_EXP)
+				_show_msg(tr("천도복숭아 냠냠! 친밀도 +%d") % _t(GameData.PEACH_EXP))
 			else:
 				var before := puppy.stage
 				puppy.add_exp(GameData.PEACH_EXP)
 				if puppy.stage == before:
-					_show_msg("천도복숭아 냠냠! +%d exp" % GameData.PEACH_EXP)
+					_show_msg(tr("천도복숭아 냠냠! +%d exp") % _t(GameData.PEACH_EXP))
 		"golden_peach":
 			if puppy.is_adult():
 				puppy.affection += GameData.GOLDEN_PEACH_EXP
-				_show_msg("황금복숭아 냠냠! 친밀도 +%d" % GameData.GOLDEN_PEACH_EXP)
+				_show_msg(tr("황금복숭아 냠냠! 친밀도 +%d") % _t(GameData.GOLDEN_PEACH_EXP))
 			else:
 				var before2 := puppy.stage
 				puppy.add_exp(GameData.GOLDEN_PEACH_EXP)
 				if puppy.stage == before2:
-					_show_msg("황금복숭아 냠냠! +%d exp" % GameData.GOLDEN_PEACH_EXP)
+					_show_msg(tr("황금복숭아 냠냠! +%d exp") % _t(GameData.GOLDEN_PEACH_EXP))
 		"clover":
 			GameState.luck += GameData.CLOVER_BATTLES
-			_show_msg("뭔가 좋은 일이 일어날 것 같아!")
+			_show_msg(tr("뭔가 좋은 일이 일어날 것 같아!"))
 		"pouch":
 			var got: String = GameData.roll_weighted(GameData.POUCH_WEIGHTS)
 			if got == "ticket":
 				GameState.tickets += 1
-				_show_msg("복주머니에서... 뽑기권이 나왔어요!!")
+				_show_msg(tr("복주머니에서... 뽑기권이 나왔어요!!"))
 			else:
 				GameState.add_item(got)
-				_show_msg("복주머니에서 %s%s 나왔어요!" % [GameData.ITEMS[got]["name"], _ig(GameData.ITEMS[got]["name"])])
+				_show_msg(tr("복주머니에서 %s%s 나왔어요!") % [_t((GameData.ITEMS[got]["name"])), _t(_ig(tr(GameData.ITEMS[got]["name"])))])
 	_log("아이템 사용: " + item_id)
 	_after_action()
 
@@ -1984,7 +2029,7 @@ func _relation_row(kinds: Array, other: String) -> Control:
 	row.add_theme_constant_override("separation", 6)
 	for kind in kinds:
 		row.add_child(_bond_icon(kind, 40))
-	var l := _label(GameData.DOGS[other]["name"], 28)
+	var l := _label(tr(GameData.DOGS[other]["name"]), 28)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	l.mouse_filter = MOUSE_FILTER_IGNORE
 	row.add_child(l)
@@ -1997,8 +2042,8 @@ func _on_relation_box_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		relation_box.accept_event()
-		_open_overlay("멍냥이 관계도", "복숭아는 의형제, 하트는 커플,\n방패는 신뢰, 집은 가족,\n해골은 앙숙이에요.", "notice")
-		for pair in [["peach", "의형제"], ["heart", "커플"], ["trust", "신뢰"], ["family", "가족"], ["skull", "앙숙"]]:
+		_open_overlay(tr("멍냥이 관계도"), tr("복숭아는 의형제, 하트는 커플,\n방패는 신뢰, 집은 가족,\n해골은 앙숙이에요."), "notice")
+		for pair in [["peach", tr("의형제")], ["heart", tr("커플")], ["trust", tr("신뢰")], ["family", tr("가족")], ["skull", tr("앙숙")]]:
 			drops_box.add_child(_bond_icon(pair[0], 40))
 			drops_box.add_child(_label(pair[1], 20))
 		drops_box.show()
@@ -2009,8 +2054,8 @@ func _on_relation_box_input(event: InputEvent) -> void:
 func _open_relations() -> void:
 	if busy or puppy == null:
 		return
-	var me_name: String = GameData.DOGS[puppy.dog_id]["name"]
-	rel_title.text = "%s의 관계도" % me_name
+	var me_name: String = tr(GameData.DOGS[puppy.dog_id]["name"])
+	rel_title.text = tr("%s의 관계도") % _t(me_name)
 	rel_msg.text = " "
 	_fill_relations()
 	rel_overlay.move_to_front()
@@ -2032,7 +2077,7 @@ func _fill_relations() -> void:
 		if id != me:
 			others.append(id)
 	if others.is_empty():
-		var none := _label("아직 다른 멍냥이가 없어요.\n뽑기로 친구를 데려와요!", 26)
+		var none := _label(tr("아직 다른 멍냥이가 없어요.\n뽑기로 친구를 데려와요!"), 26)
 		none.add_theme_color_override("font_color", SUB_COLOR)
 		rel_list.add_child(none)
 		return
@@ -2128,23 +2173,23 @@ func _relation_card(me: String, other: String) -> Control:
 	var name_row := HBoxContainer.new()
 	name_row.add_theme_constant_override("separation", 6)
 	info.add_child(name_row)
-	var name_l := _label(dog["name"], 30)
+	var name_l := _label(tr(dog["name"]), 30)
 	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	name_row.add_child(name_l)
 	# 꼬리표: 의형제(노랑) 커플(분홍) 신뢰(파랑) 가족(주황) 앙숙(회색)
 	if GameState.is_sworn(me, other):
-		name_row.add_child(_tag("의형제", Color(0.9, 0.7, 0.18)))
+		name_row.add_child(_tag(tr("의형제"), Color(0.9, 0.7, 0.18)))
 	if GameState.is_couple(me, other):
-		name_row.add_child(_tag("커플", PINK))
+		name_row.add_child(_tag(tr("커플"), PINK))
 	if GameData.is_trusted(me, other):
-		name_row.add_child(_tag("신뢰", Color(0.3, 0.56, 0.78)))
+		name_row.add_child(_tag(tr("신뢰"), Color(0.3, 0.56, 0.78)))
 	if GameData.is_family(me, other):
-		name_row.add_child(_tag("가족", Color(0.78, 0.56, 0.3)))
+		name_row.add_child(_tag(tr("가족"), Color(0.78, 0.56, 0.3)))
 	if GameData.is_rival(me, other):
-		name_row.add_child(_tag("앙숙", Color(0.56, 0.54, 0.53)))
+		name_row.add_child(_tag(tr("앙숙"), Color(0.56, 0.54, 0.53)))
 	if sulking:
-		name_row.add_child(_tag("토라짐", CLOVER_COL))
-	var sub := _label("%s 진영 · %s" % [GameData.FACTIONS[GameData.faction_of(other)]["name"], GameData.stage_name(GameState.stage_of(other), other)], 18)
+		name_row.add_child(_tag(tr("토라짐"), CLOVER_COL))
+	var sub := _label(tr("%s 진영 · %s") % [_t((GameData.FACTIONS[GameData.faction_of(other)]["name"])), _t(GameData.stage_name(GameState.stage_of(other), other))], 18)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	sub.add_theme_color_override("font_color", SUB_COLOR)
 	info.add_child(sub)
@@ -2157,12 +2202,12 @@ func _relation_card(me: String, other: String) -> Control:
 	if GameData.is_rival(me, other):
 		var rival_row := HBoxContainer.new()
 		rival_row.add_child(_bond_icon("skull", 34))
-		var why := "주군끼리는 앙숙!" if GameData.is_lord(me) and GameData.is_lord(other) else "서로 싫어해요"
+		var why := tr("주군끼리는 앙숙!") if GameData.is_lord(me) and GameData.is_lord(other) else tr("서로 싫어해요")
 		var mender: String = GameData.grow_out_by(me, other)
 		if mender == "both":
-			why = "둘 다 어른 되면 화해할지도..?"
+			why = tr("둘 다 어른 되면 화해할지도..?")
 		elif mender != "":
-			why = "%s 어른 되면 화해할지도..?" % GameData.DOGS[mender]["name"]
+			why = tr("%s 어른 되면 화해할지도..?") % _t((GameData.DOGS[mender]["name"]))
 		var l := _label(why, 20)
 		l.add_theme_color_override("font_color", SUB_COLOR)
 		rival_row.add_child(l)
@@ -2172,7 +2217,7 @@ func _relation_card(me: String, other: String) -> Control:
 			info.add_child(_meter("clover", GameState.clover_count(me, other), GameData.MAKEUP_CLOVERS))
 			actions.add_child(_clover_button(me, other))
 		else:
-			var hint := _label("둘 다 어른이 되면 클로버로 화해할 수 있어요", 16)
+			var hint := _label(tr("둘 다 어른이 되면 클로버로 화해할 수 있어요"), 16)
 			hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 			hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			hint.add_theme_color_override("font_color", SUB_COLOR)
@@ -2182,7 +2227,7 @@ func _relation_card(me: String, other: String) -> Control:
 	# 토라진 사이: 놀기·선물 대신 클로버로 달래기
 	if sulking:
 		var who: String = GameState.sulker(me, other)
-		var l := _label("%s %s%s 토라졌어요.." % [GameData.DOGS[who]["name"], GameData.species(who), "가"], 20)
+		var l := _label(tr("%s %s%s 토라졌어요..") % [_t((GameData.DOGS[who]["name"])), _t(GameData.species(who)), _t(("가"))], 20)
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		l.add_theme_color_override("font_color", SUB_COLOR)
 		info.add_child(l)
@@ -2201,25 +2246,25 @@ func _relation_card(me: String, other: String) -> Control:
 
 	if not couple:
 		if GameState.affinity_of(me, other) < aff_max:
-			actions.add_child(_small_button("놀기", _on_play.bind(other), "", Color()))
+			actions.add_child(_small_button(tr("놀기"), _on_play.bind(other), "", Color()))
 		else:
-			actions.add_child(_small_button("고백하기", _on_confess.bind(other), _confess_block_reason(me, other), PINK))
+			actions.add_child(_small_button(tr("고백하기"), _on_confess.bind(other), _confess_block_reason(me, other), PINK))
 	if not bonded:
 		if GameState.gift_count(me, other) < gift_max:
-			var no_peach := "복숭아가 없어요" if GameState.peach_total() <= 0 else ""
-			actions.add_child(_small_button("선물하기", _on_gift.bind(other), no_peach, Color(0.95, 0.6, 0.62)))
+			var no_peach := tr("복숭아가 없어요") if GameState.peach_total() <= 0 else ""
+			actions.add_child(_small_button(tr("선물하기"), _on_gift.bind(other), no_peach, Color(0.95, 0.6, 0.62)))
 		else:
-			actions.add_child(_small_button("의형제 맺기", _on_swear.bind(other), _swear_block_reason(me, other), Color(0.92, 0.5, 0.6)))
+			actions.add_child(_small_button(tr("의형제 맺기"), _on_swear.bind(other), _swear_block_reason(me, other), Color(0.92, 0.5, 0.6)))
 	if couple:
-		actions.add_child(_small_button("헤어지기", _on_breakup.bind(other), "", Color(0.6, 0.58, 0.62)))
+		actions.add_child(_small_button(tr("헤어지기"), _on_breakup.bind(other), "", Color(0.6, 0.58, 0.62)))
 	return row
 
 
 ## 초록 클로버 선물 버튼 (토라진 애 달래기 / 앙숙 화해)
 func _clover_button(me: String, other: String) -> Control:
-	var no_clover := "클로버가 없어요" if GameState.item_count("clover") <= 0 else ""
-	return _small_button("클로버 선물", _on_clover.bind(other), no_clover, CLOVER_COL,
-		"화해까지 %d/%d" % [GameState.clover_count(me, other), GameData.MAKEUP_CLOVERS])
+	var no_clover := tr("클로버가 없어요") if GameState.item_count("clover") <= 0 else ""
+	return _small_button(tr("클로버 선물"), _on_clover.bind(other), no_clover, CLOVER_COL,
+		tr("화해까지 %d/%d") % [_t(GameState.clover_count(me, other)), _t(GameData.MAKEUP_CLOVERS)])
 
 
 ## 이름 옆 작은 색 꼬리표 (신뢰 / 가족)
@@ -2243,6 +2288,8 @@ func _small_button(text: String, cb: Callable, block: String, col: Color, note :
 	var b := _button(text, cb)
 	b.custom_minimum_size = Vector2(150, 64)
 	b.add_theme_font_size_override("font_size", _fs(22))
+	if "\n" in text:   # 두 줄 글씨 (번역판 "열기 / 공훈패 10" 등)
+		b.custom_minimum_size.y = 84
 	if col != Color():
 		b.add_theme_stylebox_override("normal", _box(col, 18))
 		b.add_theme_stylebox_override("hover", _box(col.lightened(0.1), 18))
@@ -2263,38 +2310,37 @@ func _small_button(text: String, cb: Callable, block: String, col: Color, note :
 ## 고백 못 하는 이유 (할 수 있으면 "")
 func _confess_block_reason(me: String, other: String) -> String:
 	if GameData.is_lord(me) and GameData.is_lord(other):
-		return "주군끼리는 고백 안 돼요"
+		return tr("주군끼리는 고백 안 돼요")
 	if GameData.is_family(me, other):
-		return "가족이라 고백은 안 돼요"
+		return tr("가족이라 고백은 안 돼요")
 	if not GameState.get_puppy(me).is_adult() or not GameState.get_puppy(other).is_adult():
-		return "둘 다 어른이 되면!"
+		return tr("둘 다 어른이 되면!")
 	if not GameState.can_take_partner(me):
-		return "이미 애인이 있어요"
+		return tr("이미 애인이 있어요")
 	if not GameState.can_take_partner(other):
-		return "상대는 이미 커플"
+		return tr("상대는 이미 커플")
 	return ""
 
 
 ## 의형제 못 하는 이유 (할 수 있으면 "")
 func _swear_block_reason(me: String, other: String) -> String:
 	if not GameState.can_take_sworn(me):
-		return "의형제가 벌써 %d명" % GameData.SWORN_MAX
+		return tr("의형제가 벌써 %d명") % _t(GameData.SWORN_MAX)
 	if not GameState.can_take_sworn(other):
-		return "상대 의형제가 꽉 찼어요"
+		return tr("상대 의형제가 꽉 찼어요")
 	return ""
 
 
 func _on_play(other: String) -> void:
 	var me := puppy.dog_id
-	var me_name: String = GameData.DOGS[me]["name"]
-	var other_name: String = GameData.DOGS[other]["name"]
+	var me_name: String = tr(GameData.DOGS[me]["name"])
+	var other_name: String = tr(GameData.DOGS[other]["name"])
 	var gained: bool = GameState.play_together(me, other)
 	if gained:
 		var now: int = GameState.affinity_of(me, other)
-		rel_msg.text = "%s%s %s %s\n호감도 +1%s" % [me_name, _rang(me_name), other_name, PLAY_MESSAGES.pick_random(),
-			("  고백할 수 있어요!" if not GameData.is_family(me, other) else "  (가족이라 고백은 안 돼요)") if now >= GameData.affinity_max(me, other) else ""]
+		rel_msg.text = tr("%s%s %s %s\n호감도 +1%s") % [_t(me_name), _t(_rang(me_name)), _t(other_name), _t(PLAY_MESSAGES.pick_random()), _t((tr("  고백할 수 있어요!") if not GameData.is_family(me, other) else tr("  (가족이라 고백은 안 돼요)")) if now >= GameData.affinity_max(me, other) else "")]
 	else:
-		rel_msg.text = "%s%s %s 아직 어색한가 봐요...\n(다른 진영이라 친해지기 어려워요)" % [me_name, _rang(me_name), other_name]
+		rel_msg.text = tr("%s%s %s 아직 어색한가 봐요...\n(다른 진영이라 친해지기 어려워요)") % [_t(me_name), _t(_rang(me_name)), _t(other_name)]
 	_log("놀기: %s - %s (%s)" % [me, other, gained])
 	_refresh_rel_card(other)
 	if gained:
@@ -2305,11 +2351,10 @@ func _on_gift(other: String) -> void:
 	var me := puppy.dog_id
 	if not GameState.give_peach(me, other):
 		return
-	var me_name: String = GameData.DOGS[me]["name"]
-	var other_name: String = GameData.DOGS[other]["name"]
+	var me_name: String = tr(GameData.DOGS[me]["name"])
+	var other_name: String = tr(GameData.DOGS[other]["name"])
 	var n: int = GameState.gift_count(me, other)
-	rel_msg.text = "%s%s %s에게 %s를 선물했어요! (%d/%d)%s" % [me_name, _ig(me_name), other_name, GameData.ITEMS[GameState.last_gift]["name"], n, GameData.gift_max(me, other),
-		"\n의형제를 맺을 수 있어요!" if n >= GameData.gift_max(me, other) else ""]
+	rel_msg.text = tr("%s%s %s에게 %s를 선물했어요! (%d/%d)%s") % [_t(me_name), _t(_ig(me_name)), _t(other_name), _t((GameData.ITEMS[GameState.last_gift]["name"])), _t(n), _t(GameData.gift_max(me, other)), _t(("\n의형제를 맺을 수 있어요!") if n >= GameData.gift_max(me, other) else "")]
 	_log("선물: %s -> %s (%d)" % [me, other, n])
 	if GameState.peach_total() <= 0:
 		_fill_relations()   # 복숭아가 다 떨어지면 다른 카드 버튼도 바뀜
@@ -2442,7 +2487,7 @@ func _story_next() -> void:
 			cb.call()
 		return
 	var pg: Dictionary = _story.pop_front()
-	_open_overlay(str(pg.get("reveal", _story_title)), pg["text"], "story")
+	_open_overlay(str(pg.get("reveal", _story_title)), tr(pg["text"]), "story")
 	_overlay_cast(pg["cast"])
 	if pg.has("item"):   # 아이템 한 개가 빛나는 장면 (두루마리)
 		overlay_image.texture = FoodIcon.item_texture(pg["item"])
@@ -2450,7 +2495,7 @@ func _story_next() -> void:
 		overlay_image.material = null
 		overlay_image.show()
 		_start_glow()
-	confirm_button.text = pg["btn"]
+	confirm_button.text = tr(pg["btn"])
 	confirm_button.show()
 	if pg.get("party", false):
 		celebration.play("", "", get_viewport_rect().size / 2 - celebration.global_position)
@@ -2491,38 +2536,38 @@ const STORY_IDS: Array[String] = ["xiahou_ba", "sima_yi", "liu_bang"]
 func _story_book(id: String) -> Dictionary:
 	match id:
 		"xiahou_ba":
-			return {"title": "하후패 강아지 이야기", "pages": [
-				{"text": "사마의 고양이가 위나라에서 큰 소동을 일으켰어요.\n하후패 강아지는 무서웠어요.", "btn": "걱정마",
+			return {"title": tr("하후패 강아지 이야기"), "pages": [
+				{"text": tr("사마의 고양이가 위나라에서 큰 소동을 일으켰어요.\n하후패 강아지는 무서웠어요."), "btn": tr("걱정마"),
 					"cast": [["sima_yi", "line", "anger"], ["xiahou_ba", "closed", "tears"]]},
-				{"text": "그때 장비 강아지와 유선 강아지가\n하후패 강아지를 안아줬어요!", "btn": "다행이야!!",
+				{"text": tr("그때 장비 강아지와 유선 강아지가\n하후패 강아지를 안아줬어요!"), "btn": tr("다행이야!!"),
 					"cast": [["zhang_fei", "squint"], ["xiahou_ba", "squint"], ["liu_shan", "squint"]]},
-				{"text": "하후패 강아지는 촉으로 진영을 옮기기로 했어요!", "btn": "잘 됐다!",
+				{"text": tr("하후패 강아지는 촉으로 진영을 옮기기로 했어요!"), "btn": tr("잘 됐다!"),
 					"cast": [["xiahou_ba_shu", "squint"]], "party": true},
 			]}
 		"sima_yi":
-			return {"title": "사마의 고양이 이야기", "pages": [
-				{"text": "사마의 고양이에게 조조 강아지가 찾아왔어요.", "btn": "무슨 일이야?",
+			return {"title": tr("사마의 고양이 이야기"), "pages": [
+				{"text": tr("사마의 고양이에게 조조 강아지가 찾아왔어요."), "btn": tr("무슨 일이야?"),
 					"cast": [["cao_cao", "open"], ["sima_yi", "open"]]},
-				{"text": "\"목이랑 몸이 이상해!\n너, 사실은 늑대 아니야?\"", "btn": "아니야!",
+				{"text": tr("\"목이랑 몸이 이상해!\n너, 사실은 늑대 아니야?\""), "btn": tr("아니야!"),
 					"cast": [["cao_cao", "line", "anger"], ["sima_yi", "half"]]},
-				{"text": "\"고양이인 척 해 봤자 소용없어!\"", "btn": "뭐?!",
+				{"text": tr("\"고양이인 척 해 봤자 소용없어!\""), "btn": tr("뭐?!"),
 					"cast": [["cao_cao", "line", "anger"], ["sima_yi", "closed", "tears"]]},
-				{"text": "사마의 고양이는 큰 결심을 했어요.", "btn": "뭔데?",
+				{"text": tr("사마의 고양이는 큰 결심을 했어요."), "btn": tr("뭔데?"),
 					"cast": [["sima_yi", "line"]]},
-				{"text": "바로... 자신의 나라를 만들기로!", "btn": "대단해!",
+				{"text": tr("바로... 자신의 나라를 만들기로!"), "btn": tr("대단해!"),
 					"cast": [["sima_yi_jin", "squint"]]},
-				{"text": "사마의 고양이의 새 진영, 진이 생겼어요!\n이제 새로운 진나라의 멍냥이들을 만날 수 있어요!", "btn": "확인",
+				{"text": tr("사마의 고양이의 새 진영, 진이 생겼어요!\n이제 새로운 진나라의 멍냥이들을 만날 수 있어요!"), "btn": tr("확인"),
 					"cast": [["sima_yi_jin", "squint"]], "party": true},
 			]}
 		"liu_bang":   # 진까지 다 모으면: 서고의 두루마리가 빛나며 초한지 멍냥이들이 나타남
-			return {"title": "낡은 두루마리 이야기", "pages": [
-				{"text": "모든 멍냥이를 다 모았어요!", "btn": "우와!",
+			return {"title": tr("낡은 두루마리 이야기"), "pages": [
+				{"text": tr("모든 멍냥이를 다 모았어요!"), "btn": tr("우와!"),
 					"cast": [["liu_bei", "squint"], ["cao_cao", "squint"], ["sun_quan", "squint"]]},
-				{"text": "어라..?", "btn": "무슨 일이야?",
+				{"text": tr("어라..?"), "btn": tr("무슨 일이야?"),
 					"cast": [["liu_bei", "open"], ["cao_cao", "open"], ["sun_quan", "open"]]},
-				{"text": "서고 속 오래된 두루마리가\n빛나기 시작했어요!", "btn": "이 빛은..?!",
+				{"text": tr("서고 속 오래된 두루마리가\n빛나기 시작했어요!"), "btn": tr("이 빛은..?!"),
 					"cast": [], "item": "item_scroll"},
-				{"text": "축하해요!\n400년 전 역사 속 멍냥이들이 해금되었어요!\n뽑기에서 새로운 멍냥이들을 만날 수 있어요!", "btn": "신난다!",
+				{"text": tr("축하해요!\n400년 전 역사 속 멍냥이들이 해금되었어요!\n뽑기에서 새로운 멍냥이들을 만날 수 있어요!"), "btn": tr("신난다!"),
 					"cast": [["liu_bang", "squint", "sil"], ["xiang_yu", "squint", "sil"]], "party": true},
 			]}
 	return {}
@@ -2545,7 +2590,7 @@ func _show_records(tab: String) -> void:
 	_rec_tab = tab
 	_log("기록 화면: " + tab)
 	var v := _new_page()
-	_page_header(v, "← 도감", _show_dex, "칭호 · 이야기")
+	_page_header(v, tr("← 도감"), _show_dex, tr("칭호 · 이야기"))
 	var tabs := HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", 8)
 	v.add_child(tabs)
@@ -2553,7 +2598,7 @@ func _show_records(tab: String) -> void:
 		var b := _button(t[1], _show_records.bind(t[0]))
 		b.custom_minimum_size = Vector2(0, 76)
 		b.size_flags_horizontal = SIZE_EXPAND_FILL
-		b.add_theme_font_size_override("font_size", _fs(24))
+		b.add_theme_font_size_override("font_size", _fs(24 if GameData.is_ko() else 20))
 		if t[0] == tab:   # 고른 탭 = 노란 단색
 			b.add_theme_stylebox_override("normal", _box(YELLOW, 18))
 			b.add_theme_stylebox_override("hover", _box(YELLOW.lightened(0.08), 18))
@@ -2626,7 +2671,7 @@ func _rec_face(id: String, side: float, dim := false) -> TextureRect:
 func _mask_names(text: String, ids: Array) -> String:
 	for i in ids:
 		if not GameState.owns(i):
-			text = text.replace(str(GameData.DOGS[i]["name"]), "???")
+			text = text.replace(tr(str(GameData.DOGS[i]["name"])), "???").replace(str(GameData.DOGS[i]["name"]), "???")
 	return text
 
 
@@ -2640,7 +2685,7 @@ func _rec_count(head: VBoxContainer, text: String, hint: String) -> void:
 
 
 func _rec_name(id: String) -> String:
-	return GameData.DOGS[id]["name"] if GameState.owns(id) else "???"
+	return tr(GameData.DOGS[id]["name"]) if GameState.owns(id) else "???"
 
 
 # ── 칭호: 단계표 + 칭호 받은 멍냥이 (높은 순) ──
@@ -2652,12 +2697,12 @@ func _rec_ranks(head: VBoxContainer, list: VBoxContainer) -> void:
 	ids.sort_custom(func(a: String, b: String) -> bool:
 		var ea := int(GameState.battle_exp.get(a, 0))
 		var eb := int(GameState.battle_exp.get(b, 0))
-		return ea > eb if ea != eb else GameData.DOGS[a]["name"] < GameData.DOGS[b]["name"])
-	_rec_count(head, "칭호 받은 멍냥이 %d마리" % ids.size(), "대전에서 이길수록 전공이 쌓여 칭호가 올라가요")
+		return ea > eb if ea != eb else tr(GameData.DOGS[a]["name"]) < tr(GameData.DOGS[b]["name"]))
+	_rec_count(head, tr("칭호 받은 멍냥이 %d마리") % _t(ids.size()), tr("대전에서 이길수록 전공이 쌓여 칭호가 올라가요"))
 	for ht in GameData.HIDDEN_TITLES:
 		list.add_child(_hidden_card(ht))
 	# 단계표
-	for pair in [["무장", GameData.WAR_RANKS, "guan_yu"], ["책사", GameData.STRAT_RANKS, "zhuge_liang"]]:
+	for pair in [[tr("무장"), GameData.WAR_RANKS, "guan_yu"], [tr("책사"), GameData.STRAT_RANKS, "zhuge_liang"]]:
 		var row := HFlowContainer.new()
 		row.alignment = FlowContainer.ALIGNMENT_CENTER
 		row.add_theme_constant_override("h_separation", 6)
@@ -2669,7 +2714,7 @@ func _rec_ranks(head: VBoxContainer, list: VBoxContainer) -> void:
 		for i in ranks.size():
 			if ranks[i] == "황제":
 				var e = EmperorTagScript.new()
-				e.setup("황제", "gold", _fs(17))
+				e.setup(tr("황제"), "gold", _fs(17))
 				row.add_child(e)
 				continue
 			var t = ShinyTagScript.new()
@@ -2677,7 +2722,7 @@ func _rec_ranks(head: VBoxContainer, list: VBoxContainer) -> void:
 			row.add_child(t)
 		head.add_child(row)
 	if ids.is_empty():
-		var none := _label("아직 칭호를 받은 멍냥이가 없어요", 22)
+		var none := _label(tr("아직 칭호를 받은 멍냥이가 없어요"), 22)
 		none.add_theme_color_override("font_color", SUB_COLOR)
 		list.add_child(none)
 		return
@@ -2693,7 +2738,7 @@ func _rec_ranks(head: VBoxContainer, list: VBoxContainer) -> void:
 		var top := HBoxContainer.new()
 		top.add_theme_constant_override("separation", 10)
 		col.add_child(top)
-		var name_l := _label(GameData.DOGS[id]["name"], 26)
+		var name_l := _label(tr(GameData.DOGS[id]["name"]), 26)
 		name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		top.add_child(name_l)
 		var rt := _rank_tag(id, 18)
@@ -2712,7 +2757,7 @@ func _rec_ranks(head: VBoxContainer, list: VBoxContainer) -> void:
 		if int(rp["next"]) < 0:
 			bar.max_value = 1
 			bar.value = 1
-			num = _label("최고 칭호! (전공 %d)" % rp["exp"], 16)
+			num = _label(tr("최고 칭호! (전공 %d)") % _t(rp["exp"]), 16)
 		else:
 			bar.max_value = int(rp["next"]) - int(rp["prev"])
 			bar.value = int(rp["exp"]) - int(rp["prev"])
@@ -2734,22 +2779,22 @@ func _rec_specials(head: VBoxContainer, list: VBoxContainer) -> void:
 		total += 1
 		if GameState.pair_win_count(sp["a"], sp["b"]) >= int(sp["wins"]):
 			done.append(sp)
-	_rec_count(head, "스페셜 칭호 %d / %d" % [done.size(), total],
-		"대전에서 불꽃 표시가 뜨는 짝꿍과 %d번 이기면 받아요" % int(GameData.SPECIAL_TITLES[0]["wins"]))
+	_rec_count(head, tr("스페셜 칭호 %d / %d") % [_t(done.size()), _t(total)],
+		tr("대전에서 불꽃 표시가 뜨는 짝꿍과 %d번 이기면 받아요") % _t(int(GameData.SPECIAL_TITLES[0]["wins"])))
 	if done.is_empty():
-		var none := _label("아직 받은 스페셜 칭호가 없어요.\n대전에서 멍냥이를 고를 때\n불꽃이 뜨는 짝꿍을 찾아봐요!", 24)
+		var none := _label(tr("아직 받은 스페셜 칭호가 없어요.\n대전에서 멍냥이를 고를 때\n불꽃이 뜨는 짝꿍을 찾아봐요!"), 24)
 		none.add_theme_color_override("font_color", SUB_COLOR)
 		list.add_child(none)
 		return
 	for sp in done:
-		var fc := _special_colors(sp["name"])   # 칭호 색 그대로 액자 테두리
+		var fc := _special_colors(tr(sp["name"]))   # 칭호 색 그대로 액자 테두리
 		var card = FramePanelScript.new()
 		card.setup(fc[0], fc[1], 18)
 		var col := VBoxContainer.new()
 		col.add_theme_constant_override("separation", 12)
 		card.add_child(col)
 		var top := CenterContainer.new()
-		top.add_child(_special_tag(sp["name"], 36))
+		top.add_child(_special_tag(tr(sp["name"]), 36))
 		col.add_child(top)
 		var mem := HBoxContainer.new()
 		mem.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -2758,7 +2803,7 @@ func _rec_specials(head: VBoxContainer, list: VBoxContainer) -> void:
 			var mv := VBoxContainer.new()
 			mv.add_theme_constant_override("separation", 0)
 			mv.add_child(_rec_face(m, 180))
-			mv.add_child(_label(GameData.DOGS[m]["name"], 30))
+			mv.add_child(_label(tr(GameData.DOGS[m]["name"]), 30))
 			mem.add_child(mv)
 		col.add_child(mem)
 		list.add_child(card)
@@ -2778,12 +2823,12 @@ func _rec_groups(head: VBoxContainer, list: VBoxContainer) -> void:
 	for g in gs:
 		if GameState.group_done(g):
 			n += 1
-	_rec_count(head, "단체 칭호 %d / %d" % [n, gs.size()], "멤버를 모두 데려와서 모두 칭호 3단계(교위·참군) 이상이면 받아요")
+	_rec_count(head, tr("단체 칭호 %d / %d") % [_t(n), _t(gs.size())], tr("멤버를 모두 데려와서 모두 칭호 3단계(교위·참군) 이상이면 받아요"))
 	for g in gs:
 		var got := GameState.group_done(g)
 		var card: PanelContainer
 		if got:   # 받은 단체 칭호: 칭호 색 그라데이션 액자 프레임
-			var gc := _group_colors(g["name"])
+			var gc := _group_colors(tr(g["name"]))
 			var fp = FramePanelScript.new()
 			fp.setup(gc[0], gc[1], 14)
 			card = fp
@@ -2800,9 +2845,9 @@ func _rec_groups(head: VBoxContainer, list: VBoxContainer) -> void:
 		top.alignment = BoxContainer.ALIGNMENT_CENTER
 		top.add_theme_constant_override("separation", 10)
 		if got:
-			top.add_child(_group_tag(g["name"], 32))
+			top.add_child(_group_tag(tr(g["name"]), 32))
 		else:
-			top.add_child(_label(g["name"], 32))
+			top.add_child(_label(tr(g["name"]), 32))
 		var cnt := _label("%d / %d" % [GameState.group_count(g), (g["members"] as Array).size()], 26)
 		cnt.add_theme_color_override("font_color", Color(0.3, 0.6, 0.36) if got else SUB_COLOR)
 		top.add_child(cnt)
@@ -2815,7 +2860,7 @@ func _rec_groups(head: VBoxContainer, list: VBoxContainer) -> void:
 			mv.add_theme_constant_override("separation", 0)
 			var reached: bool = GameState.owns(m) and GameState.rank_of(m) >= GameData.GROUP_RANK
 			mv.add_child(_rec_face(m, 104 if (g["members"] as Array).size() <= 4 else 96, not reached))
-			var ml := _label(_rec_name(m), 22)
+			var ml := _label(_rec_name(m), 22 if GameData.is_ko() else 16)
 			ml.add_theme_color_override("font_color", TEXT_COLOR if reached else SUB_COLOR)
 			mv.add_child(ml)
 			mem.add_child(mv)
@@ -2856,18 +2901,18 @@ func _hidden_card(ht: Dictionary) -> Control:
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 8)
 	card.add_child(col)
-	var cap := _label("히든 칭호", 20)
+	var cap := _label(tr("히든 칭호"), 20)
 	cap.add_theme_color_override("font_color", SUB_COLOR)
 	col.add_child(cap)
 	var top := CenterContainer.new()
 	if got:
-		top.add_child(_hidden_tag(ht["name"], 32))
+		top.add_child(_hidden_tag(tr(ht["name"]), 32))
 	else:
 		var q := _label("???", 32)
 		q.add_theme_color_override("font_color", SUB_COLOR)
 		top.add_child(q)
 	col.add_child(top)
-	var h := _label(str(ht["hint"]) if got else "조건은 비밀이에요", 20)
+	var h := _label(str(ht["hint"]) if got else tr("조건은 비밀이에요"), 20)
 	h.add_theme_color_override("font_color", SUB_COLOR)
 	col.add_child(h)
 	return card
@@ -2878,10 +2923,10 @@ func _adult_unlock_notes(dog_id: String) -> String:
 	var out := ""
 	for il in GameData.ILLUSTS:
 		if ILLUST_ON and (il["members"] as Array).has(dog_id) and _illust_done(il):   # 그림 완성 전엔 알림 안 뜸
-			out += "\n\n일러스트 「%s」를 얻었어요!\n도감 → 칭호 · 이야기 → 그림에서 볼 수 있어요" % il["name"]
+			out += tr("\n\n일러스트 「%s」를 얻었어요!\n도감 → 칭호 · 이야기 → 그림에서 볼 수 있어요") % _t((il["name"]))
 	for ht in GameData.HIDDEN_TITLES:
 		if _hidden_done(ht["id"]):   # 마지막 한 마리가 어른이 되는 순간 한 번만 뜸
-			out += "\n\n히든 칭호 「%s」를 얻었어요!" % ht["name"]
+			out += tr("\n\n히든 칭호 「%s」를 얻었어요!") % _t((ht["name"]))
 	return out
 
 
@@ -2917,7 +2962,7 @@ func _rec_arts(head: VBoxContainer, list: VBoxContainer) -> void:
 	for il in ils:
 		if _illust_done(il):
 			n += 1
-	_rec_count(head, "모은 그림 %d / %d" % [n, ils.size()], "멤버를 모두 어른으로 키우면 그림을 얻어요")
+	_rec_count(head, tr("모은 그림 %d / %d") % [_t(n), _t(ils.size())], tr("멤버를 모두 어른으로 키우면 그림을 얻어요"))
 	for il in ils:
 		var got := _illust_done(il)
 		var card: PanelContainer
@@ -2937,10 +2982,10 @@ func _rec_arts(head: VBoxContainer, list: VBoxContainer) -> void:
 		var top := HBoxContainer.new()
 		top.alignment = BoxContainer.ALIGNMENT_CENTER
 		top.add_theme_constant_override("separation", 10)
-		var fname := _label(str({"art_chohan": "초한", "art_special": "군웅"}.get(il["id"], GameData.FACTIONS[il["faction"]]["name"])), 24)
+		var fname := _label(str({"art_chohan": tr("초한"), "art_special": tr("군웅")}.get(il["id"], tr(GameData.FACTIONS[il["faction"]]["name"]))), 24)
 		fname.add_theme_color_override("font_color", SUB_COLOR)
 		top.add_child(fname)
-		top.add_child(_label(il["name"] if got else "???", 32))
+		top.add_child(_label(tr(il["name"]) if got else "???", 32))
 		var cnt := 0
 		for m in il["members"]:
 			if _adult(m):
@@ -2960,11 +3005,11 @@ func _rec_arts(head: VBoxContainer, list: VBoxContainer) -> void:
 				pv.mouse_filter = MOUSE_FILTER_IGNORE
 				col.add_child(pv)
 			else:
-				var wait := _label("그림 준비 중이에요", 24)
+				var wait := _label(tr("그림 준비 중이에요"), 24)
 				wait.add_theme_color_override("font_color", SUB_COLOR)
 				col.add_child(wait)
 			var bb := CenterContainer.new()
-			bb.add_child(_big_small(_small_button("크게 보기", _view_illust.bind(il), "" if tex != null else "준비 중", Color(0.55, 0.45, 0.72))))
+			bb.add_child(_big_small(_small_button(tr("크게 보기"), _view_illust.bind(il), "" if tex != null else tr("준비 중"), Color(0.55, 0.45, 0.72))))
 			col.add_child(bb)
 		else:   # 아직: 멤버 얼굴 (4명씩 두 줄)
 			var grid := GridContainer.new()
@@ -2978,7 +3023,7 @@ func _rec_arts(head: VBoxContainer, list: VBoxContainer) -> void:
 				var mv := VBoxContainer.new()
 				mv.add_theme_constant_override("separation", 0)
 				mv.add_child(_rec_face(m, 96, not _adult(m)))
-				var ml := _label(_rec_name(m), 22)
+				var ml := _label(_rec_name(m), 22 if GameData.is_ko() else 16)
 				ml.add_theme_color_override("font_color", TEXT_COLOR if _adult(m) else SUB_COLOR)
 				mv.add_child(ml)
 				grid.add_child(mv)
@@ -3003,7 +3048,7 @@ func _view_illust(il: Dictionary) -> void:
 	box.add_theme_constant_override("separation", 16)
 	box.mouse_filter = MOUSE_FILTER_IGNORE
 	view.add_child(box)
-	var tl := _label(il["name"], 34)
+	var tl := _label(tr(il["name"]), 34)
 	tl.add_theme_color_override("font_color", Color.WHITE)
 	box.add_child(tl)
 	var pic := TextureRect.new()
@@ -3013,7 +3058,7 @@ func _view_illust(il: Dictionary) -> void:
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	pic.mouse_filter = MOUSE_FILTER_IGNORE
 	box.add_child(pic)
-	var hint := _label("화면을 누르면 닫혀요", 22)
+	var hint := _label(tr("화면을 누르면 닫혀요"), 22)
 	hint.add_theme_color_override("font_color", Color(1, 1, 1, 0.7))
 	box.add_child(hint)
 	view.gui_input.connect(func(e: InputEvent) -> void:
@@ -3033,7 +3078,7 @@ func _rec_stories(head: VBoxContainer, list: VBoxContainer) -> void:
 	for id in all:
 		if _story_seen(id):
 			n += 1
-	_rec_count(head, "본 이야기 %d / %d" % [n, all.size()], "본 이야기는 언제든 다시 볼 수 있어요")
+	_rec_count(head, tr("본 이야기 %d / %d") % [_t(n), _t(all.size())], tr("본 이야기는 언제든 다시 볼 수 있어요"))
 	for id in all:
 		var sp: bool = str(id).begins_with("sp_")
 		var title: String
@@ -3041,15 +3086,15 @@ func _rec_stories(head: VBoxContainer, list: VBoxContainer) -> void:
 		var hint: String
 		if sp:
 			var b := _sp_book(id)
-			title = b["title"]
+			title = tr(b["title"])
 			faces = b["faces"]
-			hint = "%s · 공훈패 %d" % [_mask_names(str(b["cond"]), b["faces"]), GameData.SPECIAL_STORY_COST]
+			hint = tr("%s · 공훈패 %d") % [_t(_mask_names(str(b["cond"]), b["faces"])), _t(GameData.SPECIAL_STORY_COST)]
 			if not _story_seen(id) and not _sp_after_ok(id):
 				hint = _sp_after_text(id)
 		else:
 			title = _story_book(id)["title"]
 			faces = [id] if id != GameData.CHOHAN_STORY else ["liu_bang", "xiang_yu"]
-			hint = _mask_names(str(STORY_HINTS.get(id, "")), faces)
+			hint = _mask_names(tr(str(STORY_HINTS.get(id, ""))), faces)
 		var seen := _story_seen(id)
 		var card := _card_row()
 		var h: HBoxContainer = card.get_child(0)
@@ -3067,15 +3112,15 @@ func _rec_stories(head: VBoxContainer, list: VBoxContainer) -> void:
 		if not seen:
 			tl.add_theme_color_override("font_color", SUB_COLOR)
 		info.add_child(tl)
-		var hl := _label(("스페셜 이야기 · " if sp else "진영 이야기 · ") + hint, 21)
+		var hl := _label((tr("스페셜 이야기 · ") if sp else tr("진영 이야기 · ")) + hint, 21)
 		hl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		hl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		hl.add_theme_color_override("font_color", SUB_COLOR)
 		info.add_child(hl)
 		if seen:
-			h.add_child(_big_small(_small_button("다시 보기", _rec_replay.bind(id), "", Color(0.55, 0.45, 0.72))))
+			h.add_child(_big_small(_small_button(tr("다시 보기"), _rec_replay.bind(id), "", Color(0.55, 0.45, 0.72))))
 		elif sp:
-			h.add_child(_big_small(_small_button("열러 가기", _show_sp_stories, "", Color(0.86, 0.6, 0.2))))
+			h.add_child(_big_small(_small_button(tr("열러 가기"), _show_sp_stories, "", Color(0.86, 0.6, 0.2))))
 		list.add_child(card)
 
 
@@ -3091,7 +3136,7 @@ func _rec_replay(id: String) -> void:
 	var book := _sp_book(id) if id.begins_with("sp_") else _story_book(id)
 	if book.is_empty():
 		return
-	_play_story(book["title"], book["pages"], func() -> void:
+	_play_story(tr(book["title"]), book["pages"], func() -> void:
 		_set_busy(false)
 		_show_records("story"))
 
@@ -3120,101 +3165,101 @@ func _sp_list() -> Array[String]:
 func _sp_book(id: String) -> Dictionary:
 	match id:
 		"sp_taoyuan":
-			return {"title": "복숭아 동산의 약속", "faces": ["liu_bei", "guan_yu", "zhang_fei"],
-				"cond": "유비·관우·장비가 서로 모두 의형제", "pages": [
-				{"text": "탁현의 복숭아 동산에 유비 강아지, 관우 강아지,\n장비 강아지가 모였어요.", "btn": "무슨 일이야?",
+			return {"title": tr("복숭아 동산의 약속"), "faces": ["liu_bei", "guan_yu", "zhang_fei"],
+				"cond": tr("유비·관우·장비가 서로 모두 의형제"), "pages": [
+				{"text": tr("탁현의 복숭아 동산에 유비 강아지, 관우 강아지,\n장비 강아지가 모였어요."), "btn": tr("무슨 일이야?"),
 					"cast": [["liu_bei", "open"], ["guan_yu", "half"], ["zhang_fei", "open"]]},
-				{"text": "\"우리 셋, 오늘부터 형제 하자!\"\n장비 강아지가 꼬리를 붕붕 흔들었어요.", "btn": "좋아!",
+				{"text": tr("\"우리 셋, 오늘부터 형제 하자!\"\n장비 강아지가 꼬리를 붕붕 흔들었어요."), "btn": tr("좋아!"),
 					"cast": [["zhang_fei", "squint"], ["liu_bei", "open"], ["guan_yu", "half"]]},
-				{"text": "그런데... 누가 형님이지?\n셋은 서로 눈치를 봤어요.", "btn": "누굴까?",
+				{"text": tr("그런데... 누가 형님이지?\n셋은 서로 눈치를 봤어요."), "btn": tr("누굴까?"),
 					"cast": [["liu_bei", "line"], ["guan_yu", "line"], ["zhang_fei", "line"]]},
-				{"text": "결국 제일 먼저 복숭아를 다 먹은\n유비 강아지가 큰형님이 되었어요!", "btn": "냠냠!",
+				{"text": tr("결국 제일 먼저 복숭아를 다 먹은\n유비 강아지가 큰형님이 되었어요!"), "btn": tr("냠냠!"),
 					"cast": [["liu_bei", "squint"], ["guan_yu", "closed", "tears"], ["zhang_fei", "closed", "tears"]]},
-				{"text": "세 강아지는 영원히 함께하기로 약속했어요!", "btn": "멋져!",
+				{"text": tr("세 강아지는 영원히 함께하기로 약속했어요!"), "btn": tr("멋져!"),
 					"cast": [["liu_bei", "squint"], ["guan_yu", "squint"], ["zhang_fei", "squint"]], "party": true},
 			]}
 		"sp_changban":
-			return {"title": "장판파의 아기", "faces": ["zhao_yun", "liu_shan"],
-				"cond": "조운·유선 하트 가득", "pages": [
-				{"text": "장판파에서 아기 유선 강아지가 길을 잃었어요!", "btn": "큰일이다!",
+			return {"title": tr("장판파의 아기"), "faces": ["zhao_yun", "liu_shan"],
+				"cond": tr("조운·유선 하트 가득"), "pages": [
+				{"text": tr("장판파에서 아기 유선 강아지가 길을 잃었어요!"), "btn": tr("큰일이다!"),
 					"cast": [["liu_shan", "closed", "tears"]]},
-				{"text": "그때 조운 강아지가 번개처럼 달려왔어요!", "btn": "빨리빨리!",
+				{"text": tr("그때 조운 강아지가 번개처럼 달려왔어요!"), "btn": tr("빨리빨리!"),
 					"cast": [["zhao_yun", "open"]]},
-				{"text": "조운 강아지는 유선 강아지를 품에 꼭 안고 달렸어요.", "btn": "영차영차!",
+				{"text": tr("조운 강아지는 유선 강아지를 품에 꼭 안고 달렸어요."), "btn": tr("영차영차!"),
 					"cast": [["zhao_yun", "line"], ["liu_shan", "open"]]},
-				{"text": "유선 강아지는 품 안에서 쿨쿨 잠들어 버렸어요.", "btn": "귀여워..",
+				{"text": tr("유선 강아지는 품 안에서 쿨쿨 잠들어 버렸어요."), "btn": tr("귀여워.."),
 					"cast": [["zhao_yun", "squint"], ["liu_shan", "closed"]]},
-				{"text": "무사히 유비 강아지 품으로 돌아왔어요!", "btn": "다행이다!",
+				{"text": tr("무사히 유비 강아지 품으로 돌아왔어요!"), "btn": tr("다행이다!"),
 					"cast": [["liu_bei", "squint"], ["zhao_yun", "squint"], ["liu_shan", "squint"]], "party": true},
 			]}
 		"sp_guagu":
-			return {"title": "바둑 두는 관우", "faces": ["guan_yu", "hua_tuo"],
-				"cond": "관우·화타 둘 다 어른", "pages": [
-				{"text": "관우 강아지가 팔에 화살을 맞았어요.", "btn": "아야!",
+			return {"title": tr("바둑 두는 관우"), "faces": ["guan_yu", "hua_tuo"],
+				"cond": tr("관우·화타 둘 다 어른"), "pages": [
+				{"text": tr("관우 강아지가 팔에 화살을 맞았어요."), "btn": tr("아야!"),
 					"cast": [["guan_yu", "closed", "tears"]]},
-				{"text": "화타 고양이가 달려왔어요.\n\"뼈까지 싹싹 긁어야 해요!\"", "btn": "으악!",
+				{"text": tr("화타 고양이가 달려왔어요.\n\"뼈까지 싹싹 긁어야 해요!\""), "btn": tr("으악!"),
 					"cast": [["hua_tuo", "open"], ["guan_yu", "half"]]},
-				{"text": "관우 강아지는 바둑을 두며 꾹 참았어요.", "btn": "대단해..",
+				{"text": tr("관우 강아지는 바둑을 두며 꾹 참았어요."), "btn": tr("대단해.."),
 					"cast": [["guan_yu", "line"], ["hua_tuo", "line"]]},
-				{"text": "사실... 발가락이 꼼지락꼼지락 떨리고 있었어요.", "btn": "큭큭큭!",
+				{"text": tr("사실... 발가락이 꼼지락꼼지락 떨리고 있었어요."), "btn": tr("큭큭큭!"),
 					"cast": [["guan_yu", "line", "tears"], ["hua_tuo", "squint"]]},
-				{"text": "치료 끝! 관우 강아지는 씩씩하게 다 나았어요!", "btn": "잘했어!",
+				{"text": tr("치료 끝! 관우 강아지는 씩씩하게 다 나았어요!"), "btn": tr("잘했어!"),
 					"cast": [["guan_yu", "squint"], ["hua_tuo", "squint"]], "party": true},
 			]}
 		"sp_kongcheng":
-			return {"title": "텅 빈 성", "faces": ["zhuge_liang", "sima_yi"],
-				"cond": "제갈량·사마의 둘 다 어른", "pages": [
-				{"text": "사마의 고양이가 서성에 쳐들어왔어요!", "btn": "어떡해!",
+			return {"title": tr("텅 빈 성"), "faces": ["zhuge_liang", "sima_yi"],
+				"cond": tr("제갈량·사마의 둘 다 어른"), "pages": [
+				{"text": tr("사마의 고양이가 서성에 쳐들어왔어요!"), "btn": tr("어떡해!"),
 					"cast": [["sima_yi", "open"]]},
-				{"text": "그런데 성문이 활짝 열려 있고,\n제갈량 고양이가 거문고를 타고 있었어요.", "btn": "띵가띵가~",
+				{"text": tr("그런데 성문이 활짝 열려 있고,\n제갈량 고양이가 거문고를 타고 있었어요."), "btn": tr("띵가띵가~"),
 					"cast": [["zhuge_liang", "squint"]]},
-				{"text": "\"수상해... 분명 함정이야!\"\n사마의 고양이는 꼬리를 바짝 세웠어요.", "btn": "의심 많아!",
+				{"text": tr("\"수상해... 분명 함정이야!\"\n사마의 고양이는 꼬리를 바짝 세웠어요."), "btn": tr("의심 많아!"),
 					"cast": [["sima_yi", "line"], ["zhuge_liang", "squint"]]},
-				{"text": "사마의 고양이는 후다닥 도망쳤어요.\n사실 성은 텅텅 비어 있었답니다!", "btn": "휴우~",
+				{"text": tr("사마의 고양이는 후다닥 도망쳤어요.\n사실 성은 텅텅 비어 있었답니다!"), "btn": tr("휴우~"),
 					"cast": [["zhuge_liang", "closed", "tears"]], "party": true},
 			]}
 		"sp_fengyi":
-			return {"title": "봉의정의 약속", "faces": ["lu_bu", "diao_chan"],
-				"cond": "여포·초선 커플", "pages": [
-				{"text": "여포 강아지는 초선 고양이를 무척 좋아했어요.", "btn": "알콩달콩",
+			return {"title": tr("봉의정의 약속"), "faces": ["lu_bu", "diao_chan"],
+				"cond": tr("여포·초선 커플"), "pages": [
+				{"text": tr("여포 강아지는 초선 고양이를 무척 좋아했어요."), "btn": tr("알콩달콩"),
 					"cast": [["lu_bu", "squint"], ["diao_chan", "squint"]]},
-				{"text": "그런데 동탁 강아지가\n초선 고양이를 데려가 버렸어요!", "btn": "뭐?!",
+				{"text": tr("그런데 동탁 강아지가\n초선 고양이를 데려가 버렸어요!"), "btn": tr("뭐?!"),
 					"cast": [["dong_zhuo", "open"], ["diao_chan", "closed", "tears"]]},
-				{"text": "여포 강아지는 화가 잔뜩 났어요.", "btn": "화났다!",
+				{"text": tr("여포 강아지는 화가 잔뜩 났어요."), "btn": tr("화났다!"),
 					"cast": [["lu_bu", "line", "anger"]]},
-				{"text": "여포 강아지가 동탁 강아지를 혼내 주고,\n초선 고양이를 되찾았어요!", "btn": "멋져!",
+				{"text": tr("여포 강아지가 동탁 강아지를 혼내 주고,\n초선 고양이를 되찾았어요!"), "btn": tr("멋져!"),
 					"cast": [["lu_bu", "squint"], ["diao_chan", "squint"]], "party": true},
 			]}
 		"sp_wancheng":
-			return {"title": "완성의 밤", "faces": ["cao_cao", "dian_wei"],
-				"cond": "조조·전위 의형제", "pages": [
-				{"text": "깜깜한 밤, 적군이 조조 강아지를 노리고 몰려왔어요!", "btn": "위험해!",
+			return {"title": tr("완성의 밤"), "faces": ["cao_cao", "dian_wei"],
+				"cond": tr("조조·전위 의형제"), "pages": [
+				{"text": tr("깜깜한 밤, 적군이 조조 강아지를 노리고 몰려왔어요!"), "btn": tr("위험해!"),
 					"cast": [["cao_cao", "closed", "tears"]]},
-				{"text": "\"주공은 내가 지킨다!\"\n전위 강아지가 문 앞을 딱 막아섰어요.", "btn": "든든해!",
+				{"text": tr("\"주공은 내가 지킨다!\"\n전위 강아지가 문 앞을 딱 막아섰어요."), "btn": tr("든든해!"),
 					"cast": [["dian_wei", "line"]]},
-				{"text": "적군이 아무리 밀어도\n전위 강아지는 꿈쩍도 안 했어요.", "btn": "끄떡없어!",
+				{"text": tr("적군이 아무리 밀어도\n전위 강아지는 꿈쩍도 안 했어요."), "btn": tr("끄떡없어!"),
 					"cast": [["dian_wei", "line"], ["cao_cao", "open"]]},
-				{"text": "아침이 되자 조조 강아지가\n전위 강아지를 꼬옥 안아 줬어요.", "btn": "고마워!",
+				{"text": tr("아침이 되자 조조 강아지가\n전위 강아지를 꼬옥 안아 줬어요."), "btn": tr("고마워!"),
 					"cast": [["cao_cao", "squint", "tears"], ["dian_wei", "squint"]], "party": true},
 			]}
 		"sp_chengdu":
-			return {"title": "누가 먼저 성도에?", "faces": ["deng_ai", "zhong_hui"],
-				"cond": "진나라가 열리고 등애·종회 둘 다 어른", "pages": [
-				{"text": "등애 강아지와 종회 고양이가 촉으로 출발했어요.", "btn": "출발!",
+			return {"title": tr("누가 먼저 성도에?"), "faces": ["deng_ai", "zhong_hui"],
+				"cond": tr("진나라가 열리고 등애·종회 둘 다 어른"), "pages": [
+				{"text": tr("등애 강아지와 종회 고양이가 촉으로 출발했어요."), "btn": tr("출발!"),
 					"cast": [["deng_ai", "open"], ["zhong_hui", "open"]]},
-				{"text": "\"내가 먼저 도착할 거야!\"\n둘은 서로 쌩쌩 달렸어요.", "btn": "경주다!",
+				{"text": tr("\"내가 먼저 도착할 거야!\"\n둘은 서로 쌩쌩 달렸어요."), "btn": tr("경주다!"),
 					"cast": [["deng_ai", "line"], ["zhong_hui", "line", "anger"]]},
-				{"text": "등애 강아지는 음평의 산길을\n데굴데굴 굴러 내려갔어요!", "btn": "데굴데굴~",
+				{"text": tr("등애 강아지는 음평의 산길을\n데굴데굴 굴러 내려갔어요!"), "btn": tr("데굴데굴~"),
 					"cast": [["deng_ai", "closed"]]},
-				{"text": "1등은 등애 강아지!\n종회 고양이는 뾰로통해졌어요.", "btn": "아쉽다!",
+				{"text": tr("1등은 등애 강아지!\n종회 고양이는 뾰로통해졌어요."), "btn": tr("아쉽다!"),
 					"cast": [["deng_ai", "squint"], ["zhong_hui", "line", "anger"]], "party": true},
 			]}
 	if StoryData.BOOKS.has(id):   # 새 이야기들: 주인공 모두 어른이면 열림
 		var b: Dictionary = StoryData.BOOKS[id]
 		var names: Array[String] = []
 		for a in b["adult"]:
-			names.append(GameData.DOGS[a]["name"])
-		return {"title": b["title"], "faces": b["adult"], "cond": "·".join(PackedStringArray(names)) + " 모두 어른", "pages": b["pages"]}
+			names.append(tr(GameData.DOGS[a]["name"]))
+		return {"title": tr(b["title"]), "faces": b["adult"], "cond": "·".join(PackedStringArray(names)) + tr(" 모두 어른"), "pages": b["pages"]}
 	return {}
 
 
@@ -3240,7 +3285,7 @@ func _sp_after_text(id: String) -> String:
 		for f in b.get("faces", []):
 			names.append(_rec_name(str(f)))
 		parts.append("·".join(PackedStringArray(names)))
-	return "먼저 볼 이야기: " + ", ".join(PackedStringArray(parts))
+	return tr("먼저 볼 이야기: ") + ", ".join(PackedStringArray(parts))
 
 
 func _sp_after_ok(id: String) -> bool:
@@ -3283,7 +3328,7 @@ func _sp_ready(id: String) -> bool:
 func _show_sp_stories() -> void:
 	_log("스페셜 이야기 화면")
 	var v := _new_page()
-	_page_header(v, "← 홈", _show_home, "스페셜 이야기")
+	_page_header(v, tr("← 홈"), _show_home, tr("스페셜 이야기"))
 	var have := HBoxContainer.new()
 	have.alignment = BoxContainer.ALIGNMENT_CENTER
 	have.add_theme_constant_override("separation", 8)
@@ -3294,8 +3339,8 @@ func _show_sp_stories() -> void:
 	mi.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	mi.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	have.add_child(mi)
-	have.add_child(_label("공훈패 %d개" % GameState.merits, 30))
-	var hint := _label("대전에서 이기면 공훈패를 받아요!", 20)
+	have.add_child(_label(tr("공훈패 %d개") % _t(GameState.merits), 30))
+	var hint := _label(tr("대전에서 이기면 공훈패를 받아요!"), 20)
 	hint.add_theme_color_override("font_color", SUB_COLOR)
 	v.add_child(hint)
 	var list := _scroll_list(v)
@@ -3327,7 +3372,7 @@ func _sp_card(id: String) -> Control:
 	info.size_flags_horizontal = SIZE_EXPAND_FILL
 	info.alignment = BoxContainer.ALIGNMENT_CENTER
 	h.add_child(info)
-	var title := _label(book["title"] if seen else "???", 28)   # 제목은 끝까지 봐야 알 수 있음
+	var title := _label(tr(book["title"]) if seen else "???", 28)   # 제목은 끝까지 봐야 알 수 있음
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	info.add_child(title)
 	var cond_text := _mask_names(str(book["cond"]), book["faces"])
@@ -3340,18 +3385,18 @@ func _sp_card(id: String) -> Control:
 	info.add_child(cond)
 	var cost := GameData.SPECIAL_STORY_COST
 	if seen:
-		h.add_child(_small_button("다시 보기", _open_sp_story.bind(id, false), "", Color(0.55, 0.45, 0.72)))
+		h.add_child(_small_button(tr("다시 보기"), _open_sp_story.bind(id, false), "", Color(0.55, 0.45, 0.72)))
 	elif GameState.sp_paid.has(id):   # 열어 놓고 끝까지 못 본 이야기
-		h.add_child(_small_button("이어 보기", _open_sp_story.bind(id, false), "", Color(0.86, 0.6, 0.2)))
+		h.add_child(_small_button(tr("이어 보기"), _open_sp_story.bind(id, false), "", Color(0.86, 0.6, 0.2)))
 	else:
 		var block := ""
 		if not _sp_after_ok(id):
-			block = "앞 이야기 먼저!"
+			block = tr("앞 이야기 먼저!")
 		elif not ok_:
 			block = " "   # 조건은 왼쪽에 이미 적혀 있어서, 줄마다 같은 안내는 생략
 		elif GameState.merits < cost:
-			block = "공훈패가 모자라요"
-		h.add_child(_small_button("열기 (공훈패 %d)" % cost, _open_sp_story.bind(id, true), block, Color(0.86, 0.6, 0.2)))
+			block = tr("공훈패가 모자라요")
+		h.add_child(_small_button(tr("열기 (공훈패 %d)") % _t(cost), _open_sp_story.bind(id, true), block, Color(0.86, 0.6, 0.2)))
 	return row
 
 
@@ -3372,13 +3417,13 @@ func _open_sp_story(id: String, pay: bool) -> void:
 
 ## 처음 볼 때는 제목이 ??? 였다가 마지막 장에서 공개
 func _sp_title_for_play(id: String, book: Dictionary) -> String:
-	return book["title"] if GameState.story_seen(id) else "???"
+	return tr(book["title"]) if GameState.story_seen(id) else "???"
 
 
 func _sp_pages_for_play(id: String, book: Dictionary) -> Array:
 	var pages: Array = (book["pages"] as Array).duplicate(true)
 	if not GameState.story_seen(id) and not pages.is_empty():
-		(pages[-1] as Dictionary)["reveal"] = book["title"]
+		(pages[-1] as Dictionary)["reveal"] = tr(book["title"])
 	return pages
 
 ## 이 멍냥이 이야기를 이미 봤는지 (도감 다시 보기 버튼)
@@ -3409,12 +3454,12 @@ func _story_check() -> bool:
 		return false
 	if who == GameData.CHOHAN_STORY:
 		var book0 := _story_book(who)
-		_play_story(book0["title"], book0["pages"], func() -> void:
+		_play_story(tr(book0["title"]), book0["pages"], func() -> void:
 			GameState.mark_story(who)   # 한·초 열림 → 뽑기에 나옴
 			_after_story())
 		return true
 	var book := _story_book(who)
-	_play_story(book["title"], book["pages"], func() -> void:
+	_play_story(tr(book["title"]), book["pages"], func() -> void:
 		GameState.defect(who)
 		GameState.mark_story(who)
 		_after_story())
@@ -3426,7 +3471,7 @@ func _replay_story(id: String) -> void:
 	var book := _story_book(id)
 	if book.is_empty():
 		return
-	_play_story(book["title"], book["pages"], func() -> void:
+	_play_story(tr(book["title"]), book["pages"], func() -> void:
 		_set_busy(false)
 		_show_growth(id))
 
@@ -3450,11 +3495,11 @@ func _on_breakup(other: String) -> void:
 	if not GameState.is_couple(puppy.dog_id, other):
 		return
 	_breakup_target = other
-	var nm: String = GameData.DOGS[other]["name"]
-	_open_overlay("헤어지기", "정말 헤어질까요?\n%s %s가 슬퍼할 수도 있어요.." % [nm, GameData.species(other)], "breakup_confirm")
+	var nm: String = tr(GameData.DOGS[other]["name"])
+	_open_overlay(tr("헤어지기"), tr("정말 헤어질까요?\n%s %s가 슬퍼할 수도 있어요..") % [_t(nm), _t(GameData.species(other))], "breakup_confirm")
 	_overlay_face(other, "open")
 	var grey := Color(0.6, 0.58, 0.62)
-	confirm_button.text = "헤어지기"
+	confirm_button.text = tr("헤어지기")
 	confirm_button.add_theme_stylebox_override("normal", _box(grey, 18))
 	confirm_button.add_theme_stylebox_override("hover", _box(grey.lightened(0.1), 18))
 	confirm_button.add_theme_stylebox_override("pressed", _box(grey.darkened(0.15), 18))
@@ -3469,8 +3514,8 @@ func _do_breakup() -> void:
 	if other == "" or not GameState.is_couple(me, other):
 		return
 	GameState.break_up(me, other)
-	var nm: String = GameData.DOGS[other]["name"]
-	_open_overlay("토라졌어요..", "%s %s가 토라졌어요.\n클로버를 %d개 선물해야 화해할 수 있어요." % [nm, GameData.species(other), GameData.MAKEUP_CLOVERS], "notice")
+	var nm: String = tr(GameData.DOGS[other]["name"])
+	_open_overlay(tr("토라졌어요.."), tr("%s %s가 토라졌어요.\n클로버를 %d개 선물해야 화해할 수 있어요.") % [_t(nm), _t(GameData.species(other)), _t(GameData.MAKEUP_CLOVERS)], "notice")
 	_overlay_face(other, "line", true)   # 화난 얼굴 💢
 	confirm_button.show()
 	_log("헤어짐: %s - %s" % [me, other])
@@ -3485,12 +3530,12 @@ func _on_clover(other: String) -> void:
 	var result: String = GameState.give_clover(me, other)
 	if result == "":
 		return
-	var nm: String = GameData.DOGS[other]["name"]
+	var nm: String = tr(GameData.DOGS[other]["name"])
 	if result == "gave":
-		rel_msg.text = "%s에게 클로버를 선물했어요! (%d/%d)" % [nm, GameState.clover_count(me, other), GameData.MAKEUP_CLOVERS]
+		rel_msg.text = tr("%s에게 클로버를 선물했어요! (%d/%d)") % [_t(nm), _t(GameState.clover_count(me, other)), _t(GameData.MAKEUP_CLOVERS)]
 	else:
 		rel_msg.text = " "
-		_open_overlay("화해했어요!", "%s %s와 화해했어요.\n이제 친하게 지내!" % [nm, GameData.species(other)], "notice")
+		_open_overlay(tr("화해했어요!"), tr("%s %s와 화해했어요.\n이제 친하게 지내!") % [_t(nm), _t(GameData.species(other))], "notice")
 		_overlay_face(other, "squint")
 		confirm_button.show()
 		_update_relations()
@@ -3506,26 +3551,26 @@ func _on_confess(other: String) -> void:
 	if _confess_block_reason(me, other) != "" or GameState.affinity_of(me, other) < GameData.affinity_max(me, other):
 		return
 	rel_overlay.hide()
-	var me_name: String = GameData.DOGS[me]["name"]
-	var other_name: String = GameData.DOGS[other]["name"]
+	var me_name: String = tr(GameData.DOGS[me]["name"])
+	var other_name: String = tr(GameData.DOGS[other]["name"])
 	_set_busy(true)
-	_open_overlay("고백 중...", "%s ♥ %s\n\n두근두근..." % [me_name, other_name], "notice")
+	_open_overlay(tr("고백 중..."), tr("%s ♥ %s\n\n두근두근...") % [_t(me_name), _t(other_name)], "notice")
 	_overlay_face(other, "open")
 	await get_tree().create_timer(1.0).timeout
 	if randf() >= GameData.confess_chance(me, other):
 		GameState.reset_affinity(me, other)
 		_overlay_sad_face(other)
-		overlay_title.text = "고백이 실패했어요.."
-		overlay_log.text = "%s%s %s\n\n다른 좋은 털뭉치 만나..\n(하트가 처음으로 돌아갔어요)" % [other_name, _ig(other_name), "고개를 저었어요" ]
+		overlay_title.text = tr("고백이 실패했어요..")
+		overlay_log.text = tr("%s%s %s\n\n다른 좋은 털뭉치 만나..\n(하트가 처음으로 돌아갔어요)") % [_t(other_name), _t(_ig(other_name)), _t(("고개를 저었어요"))]
 		_log("고백 실패: %s - %s" % [me, other])
 		_update_relations()
 		confirm_button.show()
 		return
 	GameState.add_couple(me, other)
 	_overlay_face(other, "squint")
-	overlay_title.text = "커플이 되었습니다!"
-	overlay_log.text = "%s ♥ %s\n\n오늘부터 1일 ♥" % [me_name, other_name]
-	celebration.play("커플이 되었습니다!", "%s ♥ %s" % [me_name, other_name],
+	overlay_title.text = tr("커플이 되었습니다!")
+	overlay_log.text = tr("%s ♥ %s\n\n오늘부터 1일 ♥") % [_t(me_name), _t(other_name)]
+	celebration.play(tr("커플이 되었습니다!"), "%s ♥ %s" % [me_name, other_name],
 		puppy_view.global_position + puppy_view.size / 2 - celebration.global_position)
 	_log("커플 성공: %s - %s" % [me, other])
 	_update_relations()
@@ -3537,26 +3582,26 @@ func _on_swear(other: String) -> void:
 	if _swear_block_reason(me, other) != "" or GameState.gift_count(me, other) < GameData.gift_max(me, other):
 		return
 	rel_overlay.hide()
-	var me_name: String = GameData.DOGS[me]["name"]
-	var other_name: String = GameData.DOGS[other]["name"]
+	var me_name: String = tr(GameData.DOGS[me]["name"])
+	var other_name: String = tr(GameData.DOGS[other]["name"])
 	_set_busy(true)
-	_open_overlay("의형제", "복숭아 동산에서...\n\n%s, %s" % [me_name, other_name], "notice")
+	_open_overlay(tr("의형제"), tr("복숭아 동산에서...\n\n%s, %s") % [_t(me_name), _t(other_name)], "notice")
 	_overlay_face(other, "open")
 	await get_tree().create_timer(1.0).timeout
 	if randf() >= GameData.swear_chance(me, other):
 		GameState.reset_gifts(me, other)
 		_overlay_sad_face(other)
-		overlay_title.text = "의형제를 맺지 못했어요.."
-		overlay_log.text = "%s%s 아직 마음을 열지 않았어요.\n\n(복숭아가 처음으로 돌아갔어요)" % [other_name, _ig(other_name)]
+		overlay_title.text = tr("의형제를 맺지 못했어요..")
+		overlay_log.text = tr("%s%s 아직 마음을 열지 않았어요.\n\n(복숭아가 처음으로 돌아갔어요)") % [_t(other_name), _t(_ig(other_name))]
 		_log("의형제 실패: %s - %s" % [me, other])
 		_update_relations()
 		confirm_button.show()
 		return
 	GameState.add_sworn(me, other)
 	_overlay_face(other, "squint")
-	overlay_title.text = "의형제가 되었어요!"
-	overlay_log.text = "%s, %s\n\n태어난 날은 달라도\n같은 날 같이 간식 먹자!" % [me_name, other_name]
-	celebration.play("의형제!", "%s · %s" % [me_name, other_name],
+	overlay_title.text = tr("의형제가 되었어요!")
+	overlay_log.text = tr("%s, %s\n\n태어난 날은 달라도\n같은 날 같이 간식 먹자!") % [_t(me_name), _t(other_name)]
+	celebration.play(tr("의형제!"), "%s · %s" % [me_name, other_name],
 		puppy_view.global_position + puppy_view.size / 2 - celebration.global_position)
 	_log("의형제: %s - %s" % [me, other])
 	_update_relations()
@@ -3583,8 +3628,8 @@ var _mb_ui: Dictionary = {}          # 대결 화면 노드들
 func _show_mini() -> void:
 	_log("대전")
 	var v := _new_page()
-	_page_header(v, "← 홈", _show_home, "대전")
-	var info := _label("무장 1마리 + 책사 1마리로 출전!\n기병 > 궁병 > 창병 > 기병, 화공은 무조건 승리\n먼저 3번 이기면 승리 · 싸울수록 전공이 쌓여 칭호가 올라가요", 22)
+	_page_header(v, tr("← 홈"), _show_home, tr("대전"))
+	var info := _label(tr("무장 1마리 + 책사 1마리로 출전!\n기병 > 궁병 > 창병 > 기병, 화공은 무조건 승리\n먼저 3번 이기면 승리 · 싸울수록 전공이 쌓여 칭호가 올라가요"), 22)
 	info.add_theme_color_override("font_color", SUB_COLOR)
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(info)
@@ -3592,10 +3637,10 @@ func _show_mini() -> void:
 	for i in GameData.MINI_STAGES.size():
 		var st: Dictionary = GameData.MINI_STAGES[i]
 		var locked := i > GameState.mini_cleared
-		var status := "잠겨 있어요 (앞 단계를 깨면 열려요)" if locked else ("클리어!" if i < GameState.mini_cleared else "도전!")
+		var status := tr("잠겨 있어요 (앞 단계를 깨면 열려요)") if locked else (tr("클리어!") if i < GameState.mini_cleared else tr("도전!"))
 		if i >= 3:
-			status += "  · 매우 어려움!"
-		var b := _button("%d단계  %s\n%s" % [i + 1, st["name"], status], _mini_pick.bind(i))
+			status += tr("  · 매우 어려움!")
+		var b := _button(tr("%d단계  %s\n%s") % [_t(i + 1), _t((st["name"])), _t(status)], _mini_pick.bind(i))
 		b.custom_minimum_size = Vector2(0, 120)
 		b.add_theme_font_size_override("font_size", _fs(26))
 		b.disabled = locked
@@ -3622,7 +3667,7 @@ var _mini_list: VBoxContainer
 func _mini_pick(stage_i: int) -> void:
 	_mini_stage = stage_i
 	var v := _new_page()
-	_page_header(v, "← 뒤로", _show_mini, GameData.MINI_STAGES[stage_i]["name"])
+	_page_header(v, tr("← 뒤로"), _show_mini, tr(GameData.MINI_STAGES[stage_i]["name"]))
 	if _mini_war != "" and not _mini_ok(_mini_war):
 		_mini_war = ""
 	if _mini_strat != "" and not _mini_ok(_mini_strat):
@@ -3668,7 +3713,7 @@ func _mini_pick(stage_i: int) -> void:
 	var role_row := HBoxContainer.new()
 	role_row.add_theme_constant_override("separation", 10)
 	v.add_child(role_row)
-	for r in [["war", "무장"], ["strat", "책사"]]:
+	for r in [["war", tr("무장")], ["strat", tr("책사")]]:
 		var t := _button(r[1], _mini_set_role.bind(r[0]))
 		t.custom_minimum_size = Vector2(0, 70)
 		t.size_flags_horizontal = SIZE_EXPAND_FILL
@@ -3682,14 +3727,14 @@ func _mini_pick(stage_i: int) -> void:
 	for fid in MINI_FAC_ORDER:
 		if not GameData.faction_open(fid):
 			continue
-		var t := _button(GameData.FACTIONS[fid]["name"], _mini_set_fac.bind(fid))
+		var t := _button(tr(GameData.FACTIONS[fid]["name"]), _mini_set_fac.bind(fid))
 		t.custom_minimum_size = Vector2(0, 60)
 		t.size_flags_horizontal = SIZE_EXPAND_FILL
 		t.add_theme_font_size_override("font_size", _fs(22))
 		fac_row.add_child(t)
 		_mini_tabs[fid] = t
 	_mini_list = _scroll_list(v)
-	_mini_go = _button("출전!", _mini_start)
+	_mini_go = _button(tr("출전!"), _mini_start)
 	_mini_go.custom_minimum_size = Vector2(0, 100)
 	_mini_go.add_theme_stylebox_override("disabled", _box(Color(0.72, 0.7, 0.68), 18))
 	_mini_go.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.85))
@@ -3757,22 +3802,22 @@ func _mini_pick_card(id: String, ref: String) -> Button:
 		tags.add_theme_constant_override("separation", 3)
 		tags.mouse_filter = MOUSE_FILTER_IGNORE
 		if GameState.is_sworn(ref, id):
-			tags.add_child(_tag("의형제", Color(0.9, 0.7, 0.18)))
+			tags.add_child(_tag(tr("의형제"), Color(0.9, 0.7, 0.18)))
 		if GameState.is_couple(ref, id):
-			tags.add_child(_tag("커플", PINK))
+			tags.add_child(_tag(tr("커플"), PINK))
 		if GameData.is_trusted(ref, id):
-			tags.add_child(_tag("신뢰", Color(0.3, 0.56, 0.78)))
+			tags.add_child(_tag(tr("신뢰"), Color(0.3, 0.56, 0.78)))
 		if GameData.is_family(ref, id):
-			tags.add_child(_tag("가족", Color(0.78, 0.56, 0.3)))
+			tags.add_child(_tag(tr("가족"), Color(0.78, 0.56, 0.3)))
 		if GameData.is_rival(ref, id):
-			tags.add_child(_tag("앙숙", Color(0.56, 0.54, 0.53)))
+			tags.add_child(_tag(tr("앙숙"), Color(0.56, 0.54, 0.53)))
 		if GameState.is_sulky(ref, id):
-			tags.add_child(_tag("토라짐", CLOVER_COL))
+			tags.add_child(_tag(tr("토라짐"), CLOVER_COL))
 		for t in tags.get_children():
 			(t as Control).mouse_filter = MOUSE_FILTER_IGNORE
 		if tags.get_child_count() > 0:
 			box.add_child(tags)
-	var nm := _label(GameData.DOGS[id]["name"], 24)
+	var nm := _label(tr(GameData.DOGS[id]["name"]), 24)
 	nm.mouse_filter = MOUSE_FILTER_IGNORE
 	box.add_child(nm)
 	box.add_child(_rank_panel(id, false))
@@ -3842,13 +3887,13 @@ func _mini_refresh_pick() -> void:
 			pic.texture = _centered_tex(_dog_tex(id, 2))
 			pic.modulate = Color.WHITE
 			pic.material = null
-			nm.text = GameData.DOGS[id]["name"]
+			nm.text = tr(GameData.DOGS[id]["name"])
 		else:
 			# 빈 칸: 조운(무장) / 가후(책사) 모양의 회색 단색 실루엣
 			pic.texture = _centered_tex(_dog_tex("zhao_yun" if role == "war" else "jia_xu", 2))
 			pic.modulate = Color.WHITE
 			pic.material = _silhouette_mat()
-			nm.text = "무장" if role == "war" else "책사"
+			nm.text = tr("무장") if role == "war" else tr("책사")
 	# 탭 색
 	for key in _mini_tabs:
 		var t: Button = _mini_tabs[key]
@@ -3874,7 +3919,7 @@ func _mini_refresh_pick() -> void:
 				and GameData.is_strategist(id) == (_mini_role == "strat"):
 			ids.append(id)
 	if ids.is_empty():
-		var none := _label("어른까지 키운 %s가 없어요" % ("책사" if _mini_role == "strat" else "무장"), 22)
+		var none := _label(tr("어른까지 키운 %s가 없어요") % _t((tr("책사") if _mini_role == "strat" else tr("무장"))), 22)
 		none.add_theme_color_override("font_color", SUB_COLOR)
 		_mini_list.add_child(none)
 	else:
@@ -3919,7 +3964,7 @@ func _mini_show_bonus() -> void:
 			var tag := _tag(r[0], r[1])
 			tag.add_theme_font_size_override("font_size", _fs(24))
 			line.add_child(tag)
-		var txt := _label(r[2] if wish else "%s %s" % ["보너스!" if r[3] else "주의!", r[2]], 24 if wish else 30)
+		var txt := _label(r[2] if wish else "%s %s" % [tr("보너스!") if r[3] else tr("주의!"), r[2]], 24 if wish else 30)
 		if wish:
 			txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			txt.custom_minimum_size = Vector2(600, 0)
@@ -3945,24 +3990,24 @@ func _mini_bonus(w: String, s: String) -> Dictionary:
 	var rows: Array = b["rows"]
 	if GameData.is_trusted(w, s):
 		b["peek"] = 2
-		rows.append(["신뢰", Color(0.3, 0.56, 0.78), "간파 +1", true])
+		rows.append([tr("신뢰"), Color(0.3, 0.56, 0.78), tr("간파 +1"), true])
 	if GameState.is_sworn(w, s):
 		b["double"] = true
-		rows.append(["의형제", Color(0.9, 0.7, 0.18), "협공 (첫 승리 2점)", true])
+		rows.append([tr("의형제"), Color(0.9, 0.7, 0.18), tr("협공 (첫 승리 2점)"), true])
 	if GameState.is_couple(w, s):
 		b["redraw"] = true
-		rows.append(["커플", PINK, "응원 (손패 다시 받기)", true])
+		rows.append([tr("커플"), PINK, tr("응원 (손패 다시 받기)"), true])
 	var fw: String = GameData.faction_of(w)
 	if fw == GameData.faction_of(s):
 		b["extra"] = 1
-		rows.append(["같은 진영", FACTION_COLORS[fw], "손패 +1", true])
+		rows.append([tr("같은 진영"), FACTION_COLORS[fw], tr("손패 +1"), true])
 	if GameData.is_rival(w, s):
 		b["duel"] = false
-		rows.append(["앙숙", Color(0.56, 0.54, 0.53), "일기토 못 써요", false])
+		rows.append([tr("앙숙"), Color(0.56, 0.54, 0.53), tr("일기토 못 써요"), false])
 	# 스페셜 칭호 짝꿍이면 맨 위에 빨간 글씨 (횟수는 안 알려 줌)
 	if not GameData.special_for(w, s).is_empty():
 		rows.push_front(["", Color(0.85, 0.2, 0.22),
-			"%s 강아지는 %s 고양이와 함께 싸우고 싶어해요!" % [GameData.DOGS[w]["name"], GameData.DOGS[s]["name"]], true, "wish"])
+			tr("%s 강아지는 %s 고양이와 함께 싸우고 싶어해요!") % [_t((GameData.DOGS[w]["name"])), _t((GameData.DOGS[s]["name"]))], true, "wish"])
 	return b
 
 
@@ -4015,7 +4060,7 @@ func _mini_battle_page() -> void:
 	var st: Dictionary = GameData.MINI_STAGES[_mini_stage]
 	var v := _new_page()
 	v.add_theme_constant_override("separation", 8)
-	_page_header(v, "← 포기", _ask_forfeit, st["name"])
+	_page_header(v, tr("← 포기"), _ask_forfeit, tr(st["name"]))
 	_mb_ui = {}
 	var score := _label("", 52)
 	v.add_child(score)
@@ -4077,7 +4122,7 @@ func _mini_battle_page() -> void:
 		face.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		team.add_child(face)
 		_mb_ui[key] = face
-	var result := _label("낼 카드를 골라 주세요!", 28)
+	var result := _label(tr("낼 카드를 골라 주세요!"), 28)
 	result.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(result)
 	_mb_ui["result"] = result
@@ -4093,7 +4138,7 @@ func _mini_battle_page() -> void:
 	skills.custom_minimum_size = Vector2(0, 76)        # 다 써도 자리 높이는 그대로
 	skills.add_theme_constant_override("separation", 10)
 	v.add_child(skills)
-	for sk in [["peek", "간파"], ["duel", "일기토"], ["redraw", "응원"]]:
+	for sk in [["peek", tr("간파")], ["duel", tr("일기토")], ["redraw", tr("응원")]]:
 		var b := _button(sk[1], _mini_skill.bind(sk[0]))
 		b.custom_minimum_size = Vector2(190, 76)
 		b.add_theme_font_size_override("font_size", _fs(24))
@@ -4183,19 +4228,19 @@ func _mini_faces(eyes: String) -> void:
 
 func _mini_refresh() -> void:
 	var st: Dictionary = GameData.MINI_STAGES[_mini_stage]
-	(_mb_ui["score"] as Label).text = "나 %d : %d %s" % [_mb["me"], _mb["foe"], st["enemy"]]
-	var hint := "%d번째 판" % _mb["round"]
+	(_mb_ui["score"] as Label).text = tr("나 %d : %d %s") % [_t(_mb["me"]), _t(_mb["foe"]), _t(st["enemy"])]
+	var hint := tr("%d번째 판") % _t(_mb["round"])
 	if _mb["armed"]:
-		hint += " · 일기토 준비!"
+		hint += tr(" · 일기토 준비!")
 	if st["tie_enemy"]:
-		hint += " · 비기면 상대 승리"
+		hint += tr(" · 비기면 상대 승리")
 	if st.get("no_fire", false):
-		hint += " · 화공이 막혔어요"
+		hint += tr(" · 화공이 막혔어요")
 	if int(st.get("head", 0)) > 0 and _mb["round"] == 1:
-		hint += " · 상대가 %d점 먼저!" % int(st["head"])
+		hint += tr(" · 상대가 %d점 먼저!") % _t(int(st["head"]))
 	(_mb_ui["foe_hint"] as Label).text = hint
 	var lock: bool = _mb["over"] or _mb["busy"]
-	(_mb_ui["sk_peek"] as Button).text = "간파 %d" % _mb["peek"]
+	(_mb_ui["sk_peek"] as Button).text = tr("간파 %d") % _t(_mb["peek"])
 	(_mb_ui["sk_peek"] as Button).disabled = lock or _mb["peek"] <= 0 or _mb["seen"]
 	(_mb_ui["sk_duel"] as Button).disabled = lock or not _mb["duel"]
 	(_mb_ui["sk_redraw"] as Button).disabled = lock or not _mb["redraw"]
@@ -4250,12 +4295,12 @@ func _mini_skill(kind: String) -> void:
 				_mb["peek"] -= 1
 				_mb["seen"] = true
 				_btut_event.call_deferred("peek")
-				(_mb_ui["result"] as Label).text = "%s의 간파! 상대의 수가 보여요." % GameData.DOGS[_mini_strat]["name"]
+				(_mb_ui["result"] as Label).text = tr("%s의 간파! 상대의 수가 보여요.") % _t((GameData.DOGS[_mini_strat]["name"]))
 		"duel":
 			if _mb["duel"]:
 				_mb["duel"] = false
 				_mb["armed"] = true
-				(_mb_ui["result"] as Label).text = "%s, 일기토 준비! 이번 판은 비겨도 이겨요." % GameData.DOGS[_mini_war]["name"]
+				(_mb_ui["result"] as Label).text = tr("%s, 일기토 준비! 이번 판은 비겨도 이겨요.") % _t((GameData.DOGS[_mini_war]["name"]))
 		"redraw":
 			if _mb["redraw"]:
 				_mb["redraw"] = false
@@ -4268,7 +4313,7 @@ func _mini_skill(kind: String) -> void:
 				_mb["hand"] = fresh
 				_mb["foe_card"] = _mini_foe_card()
 				_mb["seen"] = false
-				(_mb_ui["result"] as Label).text = "응원 받아서 손패를 다시 받았어요!"
+				(_mb_ui["result"] as Label).text = tr("응원 받아서 손패를 다시 받았어요!")
 	_mini_refresh()
 
 
@@ -4323,23 +4368,23 @@ func _mini_play(i: int) -> void:
 			if _mb["double"]:
 				_mb["double"] = false
 				pts = 2
-				line += "의형제 협공! 2점!"
+				line += tr("의형제 협공! 2점!")
 			elif duel_used:
-				line += "일기토 승리!"
+				line += tr("일기토 승리!")
 			elif mine == "fire":
-				line += "화공으로 불바다!"
+				line += tr("화공으로 불바다!")
 			else:
-				line += "이겼어요!"
+				line += tr("이겼어요!")
 			_mb["me"] += pts
 			_mini_faces("squint")
 			_mini_win_pop("WIN!" if pts == 1 else "WIN! ×2", my_slot)
 		"lose":
 			_mb["foe"] += 1
-			line += "졌어요.." if mine != foe else "비겼지만 상대가 가져갔어요.."
+			line += tr("졌어요..") if mine != foe else tr("비겼지만 상대가 가져갔어요..")
 			_mini_faces("line")
 			_mini_win_pop("WIN!", foe_slot)
 		_:
-			line += "비겼어요"
+			line += tr("비겼어요")
 			_mini_faces("open")
 			_mini_win_pop("DRAW", null)
 	(_mb_ui["result"] as Label).text = line
@@ -4369,7 +4414,7 @@ func _mini_play(i: int) -> void:
 func _mini_refresh_score_only() -> void:
 	var st: Dictionary = GameData.MINI_STAGES[_mini_stage]
 	var score: Label = _mb_ui["score"]
-	score.text = "나 %d : %d %s" % [_mb["me"], _mb["foe"], st["enemy"]]
+	score.text = tr("나 %d : %d %s") % [_t(_mb["me"]), _t(_mb["foe"]), _t(st["enemy"])]
 	score.pivot_offset = score.size / 2
 	var tw := create_tween()
 	tw.tween_property(score, "scale", Vector2(1.15, 1.15), 0.08)
@@ -4457,26 +4502,26 @@ func _btut_next() -> void:
 	_btut_wait = ""
 	match _btut_step:
 		0:
-			tut.show_step("대전이 열렸어요!\n무장 1마리와 책사 1마리가 함께 싸워요.", [], false)
+			tut.show_step(tr("대전이 열렸어요!\n무장 1마리와 책사 1마리가 함께 싸워요."), [], false)
 		1:
-			tut.show_step("카드는 가위바위보예요!\n기병(바위) > 궁병(가위) > 창병(보) > 기병\n화공(불)은 무조건 이겨요.", [_mb_ui["hand"]], false)
+			tut.show_step(tr("카드는 가위바위보예요!\n기병(바위) > 궁병(가위) > 창병(보) > 기병\n화공(불)은 무조건 이겨요."), [_mb_ui["hand"]], false)
 		2:
-			tut.show_step("상대 카드는 내가 카드를 낼 때까지\n??? 로 가려져 있어요.", [_mb_ui["foe_slot"]], false)
+			tut.show_step(tr("상대 카드는 내가 카드를 낼 때까지\n??? 로 가려져 있어요."), [_mb_ui["foe_slot"]], false)
 		3:
 			_btut_wait = "peek"
-			tut.show_step("책사의 간파로 상대 카드를 미리 볼 수 있어요.\n눌러 보세요!", [_mb_ui["sk_peek"]], true)
+			tut.show_step(tr("책사의 간파로 상대 카드를 미리 볼 수 있어요.\n눌러 보세요!"), [_mb_ui["sk_peek"]], true)
 		4:
 			_btut_wait = "play"
 			# 손패 + 카드 내는 곳까지 밝게 (WIN! 이 잘 보이게)
-			tut.show_step("상대는 %s을(를) 낼 거예요.\n이기는 카드를 내 보세요!" % GameData.CARD_NAMES[_mb["foe_card"]],
+			tut.show_step(tr("상대는 %s을(를) 낼 거예요.\n이기는 카드를 내 보세요!") % _t(GameData.CARD_NAMES[_mb["foe_card"]]),
 				[_mb_ui["hand"], _mb_ui["foe_slot"], _mb_ui["my_slot"]], true)
 		5:
-			tut.show_step("이기면 점수가 올라가요.\n먼저 3번 이기면 승리!", [_mb_ui["score"]], false)
+			tut.show_step(tr("이기면 점수가 올라가요.\n먼저 3번 이기면 승리!"), [_mb_ui["score"]], false)
 		6:
-			tut.show_step("일기토는 비겨도 이기게 해 주고, 응원은 손패를 다시 받아요.\n신뢰·의형제·커플 사이면 보너스도 있어요!", [_mb_ui["sk_duel"], _mb_ui["sk_redraw"]], false)
+			tut.show_step(tr("일기토는 비겨도 이기게 해 주고, 응원은 손패를 다시 받아요.\n신뢰·의형제·커플 사이면 보너스도 있어요!"), [_mb_ui["sk_duel"], _mb_ui["sk_redraw"]], false)
 		7:
 			_btut_wait = "card"
-			tut.show_step("다음 판도 이겨 보아요!", [_mb_ui["hand"], _mb_ui["foe_slot"], _mb_ui["my_slot"]], true)
+			tut.show_step(tr("다음 판도 이겨 보아요!"), [_mb_ui["hand"], _mb_ui["foe_slot"], _mb_ui["my_slot"]], true)
 		_:
 			tut.finish()   # 카드를 고르면 안내는 사라지고 끝까지 직접
 
@@ -4490,9 +4535,9 @@ func _btut_event(what: String) -> void:
 func _btut_finish() -> void:
 	tut.finish()
 	_btut_wait = ""
-	_open_overlay("승리!", "전공을 쌓아\n최고의 영웅 멍냥이가 되어 보아요!", "btut_end")
+	_open_overlay(tr("승리!"), tr("전공을 쌓아\n최고의 영웅 멍냥이가 되어 보아요!"), "btut_end")
 	_overlay_pair(_mini_war, _mini_strat, "squint")
-	confirm_button.text = "좋았어!"
+	confirm_button.text = tr("좋았어!")
 	confirm_button.show()
 	celebration.play("", "", get_viewport_rect().size / 2 - celebration.global_position)
 
@@ -4502,14 +4547,14 @@ func _ask_forfeit() -> void:
 	if _mb.is_empty() or _mb.get("over", false):
 		_show_mini()
 		return
-	_open_overlay("포기", "정말 포기하시겠습니까?\n공적을 놓치게 됩니다!", "forfeit")
+	_open_overlay(tr("포기"), tr("정말 포기하시겠습니까?\n공적을 놓치게 됩니다!"), "forfeit")
 	var red := Color(0.86, 0.32, 0.32)
-	confirm_button.text = "포기하기"
+	confirm_button.text = tr("포기하기")
 	confirm_button.add_theme_stylebox_override("normal", _box(red, 18))
 	confirm_button.add_theme_stylebox_override("hover", _box(red.lightened(0.1), 18))
 	confirm_button.add_theme_stylebox_override("pressed", _box(red.darkened(0.15), 18))
 	confirm_button.show()
-	cancel_button.text = "계속 싸우기"
+	cancel_button.text = tr("계속 싸우기")
 	cancel_button.show()
 
 
@@ -4519,10 +4564,10 @@ func _mini_end(won: bool) -> void:
 	_log("대전 결과: %s" % [got])
 	var text: String
 	if won:
-		text = "첫 클리어 보상!" if got["first"] else "보상"
+		text = tr("첫 클리어 보상!") if got["first"] else tr("보상")
 	else:
-		text = "%s에게 졌어요.\n다시 도전해 봐요!" % st["enemy"]
-	_open_overlay("승리!" if won else "패배..", text, "mini_end")
+		text = tr("%s에게 졌어요.\n다시 도전해 봐요!") % _t(st["enemy"])
+	_open_overlay(tr("승리!") if won else tr("패배.."), text, "mini_end")
 	overlay_log.custom_minimum_size = Vector2(560, 0)
 	if won:
 		_overlay_pair(_mini_war, _mini_strat, "squint")
@@ -4568,20 +4613,20 @@ func _mini_end(won: bool) -> void:
 	overlay_extra.add_theme_constant_override("separation", 14)
 	var before: Dictionary = got.get("before", {})
 	for id in got["ranked"]:
-		var nm: String = GameData.DOGS[id]["name"]
+		var nm: String = tr(GameData.DOGS[id]["name"])
 		var old_lv := int(before.get(id, 0))
 		var new_lv := GameState.rank_of(id)
 		var new_name: String = GameData.rank_name(id, new_lv)
 		var parts: Array = []
 		if old_lv <= 0:
-			parts = ["%s%s " % [nm, _ig(nm)], _rank_tag(id, 24, new_lv), " 칭호를 얻었어요!"]
+			parts = ["%s%s " % [nm, _ig(nm)], _rank_tag(id, 24, new_lv), tr(" 칭호를 얻었어요!")]
 		else:
-			parts = ["%s의 칭호가 " % nm, _rank_tag(id, 24, old_lv), "에서 ", _rank_tag(id, 24, new_lv), "%s 되었어요!" % _ig(new_name)]
+			parts = [tr("%s의 칭호가 ") % _t(nm), _rank_tag(id, 24, old_lv), tr("에서 "), _rank_tag(id, 24, new_lv), tr("%s 되었어요!") % _t(_ig(new_name))]
 		overlay_extra.add_child(_inline_row(parts))
 	if got.get("special", "") != "":
-		overlay_extra.add_child(_inline_row(["스페셜 칭호 ", _special_tag(got["special"], 24), " 획득!"]))
+		overlay_extra.add_child(_inline_row([tr("스페셜 칭호 "), _special_tag(got["special"], 24), tr(" 획득!")]))
 	for gname in got.get("groups", []):
-		overlay_extra.add_child(_inline_row(["단체 칭호 ", _group_tag(gname, 24), " 달성!"]))
+		overlay_extra.add_child(_inline_row([tr("단체 칭호 "), _group_tag(gname, 24), tr(" 달성!")]))
 	if overlay_extra.get_child_count() > 0:
 		overlay_extra.show()
 	confirm_button.show()
@@ -4623,7 +4668,7 @@ func _mini_stat(id: String, gain: int) -> Control:
 		c.add_child(tag)
 		box.add_child(c)
 	else:
-		var none := _label("칭호 없음", 18)
+		var none := _label(tr("칭호 없음"), 18)
 		none.add_theme_color_override("font_color", SUB_COLOR)
 		box.add_child(none)
 	var bar := ProgressBar.new()
@@ -4637,7 +4682,7 @@ func _mini_stat(id: String, gain: int) -> Control:
 	if int(rp["next"]) < 0:
 		bar.max_value = 1
 		bar.value = 1
-		num = _label("최고 칭호 (+%d)" % gain, 18)
+		num = _label(tr("최고 칭호 (+%d)") % _t(gain), 18)
 	else:
 		bar.max_value = int(rp["next"]) - int(rp["prev"])
 		bar.value = int(rp["exp"]) - int(rp["prev"])
@@ -4750,8 +4795,8 @@ func _build_overlay() -> void:
 		b.custom_minimum_size = Vector2(0, 100)
 		strategy_box.add_child(b)
 
-	confirm_button = _button("확인", _on_overlay_confirm)
-	cancel_button = _button("취소", func() -> void:
+	confirm_button = _button(tr("확인"), _on_overlay_confirm)
+	cancel_button = _button(tr("취소"), func() -> void:
 		overlay.hide()
 		_overlay_mode = "")
 	cancel_button.custom_minimum_size = Vector2(0, 90)
@@ -4797,7 +4842,7 @@ func _build_panel_overlay(list_size: Vector2) -> Array:
 	list.add_theme_constant_override("separation", 10)
 	pad.add_child(list)
 	_drag_scroll(scroll, pad)
-	var close := _button("닫기", func() -> void:
+	var close := _button(tr("닫기"), func() -> void:
 		root.hide()
 		_refresh())
 	close.custom_minimum_size = Vector2(0, 80)
@@ -4837,11 +4882,11 @@ func _open_overlay(title: String, text: String, mode: String) -> void:
 	overlay_image.rotation = 0.0
 	strategy_box.hide()
 	confirm_button.hide()
-	confirm_button.text = "확인"
+	confirm_button.text = tr("확인")
 	for key in ["normal", "hover", "pressed"]:
 		confirm_button.remove_theme_stylebox_override(key)
 	cancel_button.hide()
-	cancel_button.text = "취소"
+	cancel_button.text = tr("취소")
 	drops_box.hide()
 	drops_box.add_theme_constant_override("separation", 4)
 	for c in drops_box.get_children():
@@ -4897,7 +4942,7 @@ func _on_overlay_confirm() -> void:
 	if _overlay_mode == "battle":
 		puppy.add_fatigue(GameData.FATIGUE_PER_BATTLE)
 		if puppy.is_exhausted():
-			_show_msg("싸웠더니 너무 피곤해..")
+			_show_msg(tr("싸웠더니 너무 피곤해.."))
 		_after_action()
 		_tut_event("battle")
 
@@ -4906,12 +4951,18 @@ func _on_overlay_confirm() -> void:
 
 func _setup_theme() -> void:
 	var t := Theme.new()
-	t.default_font_size = 34
+	t.default_font_size = int(round(34 * GameData.font_scale()))
 	if ResourceLoader.exists(FONT_PATH):
 		var font: FontFile = load(FONT_PATH)
 		# 폰트에 없는 글자가 나오면 Godot이 윈도우 시스템 폰트를 전부 뒤져서 멈출 수 있음 → 끄기
 		font.allow_system_fallback = false
 		t.default_font = font
+		var lang_font := GameData.font_path()   # 일본어·중국어판: 그 언어 글꼴을 앞에, 한글 글꼴은 뒤에 받쳐 둠
+		if lang_font != "":
+			var lf: FontFile = load(lang_font)
+			lf.allow_system_fallback = false
+			lf.fallbacks = [font]
+			t.default_font = lf
 	else:
 		push_warning("한글 폰트 없음: %s 에 ttf를 넣어주세요 (웹 빌드에서 한글이 깨져요)" % FONT_PATH)
 
@@ -5019,7 +5070,21 @@ func _label(text: String, font_size: int) -> Label:
 	l.text = text
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.add_theme_font_size_override("font_size", _fs(font_size))
+	if not GameData.is_ko() and _too_wide(text, _fs(font_size)):   # 번역판: 긴 글씨는 줄바꿈해서 화면 폭을 넘지 않게
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	return l
+
+
+## 번역판에서 한 줄로 두면 너무 넓은 글씨인지 (픽셀로 잼)
+func _too_wide(text: String, px: int) -> bool:
+	var f := get_theme_default_font()
+	if f == null:
+		return text.length() > 24
+	var w := 0.0
+	for line in text.split("\n"):
+		w = maxf(w, f.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x)
+	return w > 300.0
 
 
 ## 글자 크기 단계: 화면마다 제각각이던 크기를 이 7단계 중 가장 가까운 값으로 맞춤
@@ -5034,7 +5099,7 @@ func _fs(font_size: int) -> int:
 		for s in FONT_STEPS:
 			if absi(s - font_size) <= absi(snapped_size - font_size):
 				snapped_size = s
-	return int(round(snapped_size * FONT_SCALE))
+	return int(round(snapped_size * FONT_SCALE * GameData.font_scale()))
 
 
 ## 보조 버튼: 종이색 바탕 + 주황 테두리 + 갈색 글씨 (주요 버튼만 주황으로 꽉 칠해서 눈에 띄게)
@@ -5055,7 +5120,18 @@ func _button(text: String, callback: Callable) -> Button:
 			return
 		callback.call())
 	b.button_down.connect(_jelly.bind(b))
+	if not GameData.is_ko():   # 번역판: 글씨가 길어도 버튼이 화면 밖으로 밀어내지 않게 (넘치면 … 처리)
+		b.ready.connect(_fit_button.bind(b))
 	return b
+
+
+## 폭이 정해진 버튼(세로 줄에 꽉 차거나, 가로 줄에서 늘어나거나, 최소 폭이 있는 버튼)만 글씨를 잘라 … 처리
+## (폭이 글씨에 맞춰지는 작은 버튼은 그대로 둬야 안 찌그러짐)
+func _fit_button(b: Button) -> void:
+	var p := b.get_parent()
+	if p is VBoxContainer or (b.size_flags_horizontal & Control.SIZE_EXPAND) != 0 or b.custom_minimum_size.x > 0:
+		b.clip_text = true
+		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 
 
 ## 누르는 순간 보잉! 젤리처럼 찌그러졌다 튕기며 돌아옴

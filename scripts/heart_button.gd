@@ -11,7 +11,7 @@ var disabled := false:
 		disabled = v
 		queue_redraw()
 
-var text := "소개팅":
+var text := tr("소개팅"):
 	set(v):
 		text = v
 		if _label:

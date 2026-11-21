@@ -1,7 +1,7 @@
 extends RefCounted
 ## 스페셜 이야기 원고 (tools 없이 직접 고쳐도 됨). 해금: adult 멍냥이 모두 어른 + 공훈패
 
-const ORDER: Array[String] = ["sp_pangtong", "sp_xushu", "sp_weiyan", "sp_dingjun", "sp_zhugebro", "sp_machao", "sp_xiahoudun", "sp_dingjunshadow", "sp_guojia", "sp_jiaxu", "sp_guandu", "sp_wuchao", "sp_chengong", "sp_xiapi", "sp_xuhuang", "sp_shangxiang", "sp_arrows", "sp_kurou", "sp_dongfeng", "sp_hefei", "sp_ganning", "sp_zhoutai", "sp_taishici", "sp_baiyi", "sp_sunjian", "sp_seal", "sp_duanjin", "sp_xiongjie", "sp_yiling", "sp_baima", "sp_wenyang", "sp_hongmen", "sp_hanxin", "sp_simian", "sp_tusi", "sp_wujiang", "sp_weishui", "sp_zhonglimo", "sp_yingbu", "sp_caocan", "sp_luzhi", "sp_jiangwei", "sp_luofeng", "sp_langzhong", "sp_emptybox", "sp_qianli", "sp_flood", "sp_huarong", "sp_maicheng", "sp_wuzhang", "sp_shulast", "sp_simawait", "sp_simayan", "sp_jealous", "sp_beimang"]
+const ORDER: Array[String] = ["sp_pangtong", "sp_xushu", "sp_weiyan", "sp_dingjun", "sp_zhugebro", "sp_machao", "sp_xiahoudun", "sp_dingjunshadow", "sp_guojia", "sp_jiaxu", "sp_guandu", "sp_wuchao", "sp_chengong", "sp_xiapi", "sp_xuhuang", "sp_shangxiang", "sp_arrows", "sp_kurou", "sp_dongfeng", "sp_hefei", "sp_ganning", "sp_zhoutai", "sp_taishici", "sp_baiyi", "sp_sunjian", "sp_seal", "sp_duanjin", "sp_xiongjie", "sp_yiling", "sp_baima", "sp_wenyang", "sp_hongmen", "sp_hanxin", "sp_simian", "sp_tusi", "sp_wujiang", "sp_weishui", "sp_zhonglimo", "sp_yingbu", "sp_caocan", "sp_luzhi", "sp_jiangwei", "sp_twodisc", "sp_weeping", "sp_luofeng", "sp_langzhong", "sp_emptybox", "sp_qianli", "sp_flood", "sp_huarong", "sp_maicheng", "sp_wuzhang", "sp_zhugeson", "sp_shulast", "sp_simawait", "sp_simayan", "sp_jealous", "sp_beimang"]
 
 const BOOKS := {
 	"sp_pangtong": {"title": "반나절 만에?!", "adult": ["pang_tong", "zhang_fei"], "pages": [
@@ -244,7 +244,7 @@ const BOOKS := {
 		{"text": "주창 강아지는 성문 앞에 앉아\n귀를 쫑긋 세우고 기다렸어요.", "btn": "오겠지..", "cast": [["zhou_cang", "open"]]},
 		{"text": "하지만 발소리는 끝내 들리지 않았어요.\n주창 강아지는 꼬리를 바닥에 내려놓았답니다.", "btn": "형님..", "cast": [["zhou_cang", "closed", "tears"]]},
 	]},
-	"sp_wuzhang": {"title": "오장원의 별", "adult": ["zhuge_liang", "jiang_wei"], "after": ["sp_maicheng", "sp_jiangwei"], "pages": [
+	"sp_wuzhang": {"title": "오장원의 별", "adult": ["zhuge_liang", "jiang_wei"], "after": ["sp_maicheng", "sp_jiangwei", "sp_weeping"], "pages": [
 		{"text": "오장원의 가을밤,\n제갈량 고양이가 콜록콜록 기침을 했어요.", "btn": "괜찮아요?", "cast": [["zhuge_liang", "closed"], ["jiang_wei", "open"]]},
 		{"text": "\"강유야, 이리 오렴.\"\n제갈량 고양이가 앞발로 두루마리를 건넸어요.", "btn": "스승님..", "cast": [["zhuge_liang", "half"], ["jiang_wei", "closed", "tears"]]},
 		{"text": "\"내 꾀를 모두 적어 두었단다.\n이제 네가 촉을 지켜 주렴.\"", "btn": "네..", "cast": [["zhuge_liang", "squint"], ["jiang_wei", "closed", "tears"]]},
@@ -359,5 +359,35 @@ const BOOKS := {
 		{"text": "형제는 서로 앞발을 꼭 잡고\n반딧불이를 따라 밤새 걸었답니다.", "btn": "힘내!", "cast": [["liu_bian", "half"], ["liu_xie", "half"]]},
 		{"text": "날이 밝자 커다란 그림자가 나타났어요.\n\"폐하, 이 동탁이 모시러 왔습니다~\"", "btn": "누구야?!", "cast": [["dong_zhuo", "half"], ["liu_bian", "open"]]},
 		{"text": "유변 강아지는 동생을 등 뒤에 숨기고\n귀를 바짝 세웠어요.\n아무도 모르게 꼬리가 달달 떨렸지요.", "btn": "그 뒤에는...", "cast": [["liu_bian", "line"], ["liu_xie", "open"]]},
+	]},
+	"sp_twodisc": {"title": "두 제자", "adult": ["zhuge_liang", "ma_su", "jiang_wei"], "after": ["sp_jiangwei"], "pages": [
+		{"text": "제갈량 고양이에게는 아끼는 제자가 있었어요.\n꾀가 반짝반짝한 마속 고양이였지요.", "btn": "똑똑해!", "cast": [["zhuge_liang", "squint"], ["ma_su", "squint"]]},
+		{"text": "어느 날 천수에서 온 강유 강아지가\n꼬리를 붕붕 흔들며 꾸벅 인사했어요.\n\"오늘부터 저도 제자예요!\"", "btn": "반가워!", "cast": [["jiang_wei", "squint"], ["ma_su", "open"]]},
+		{"text": "마속 고양이는 꼬리를 바짝 세웠어요.\n\"흥, 제자는 나 하나면 충분한데?\"", "btn": "질투한다..", "cast": [["ma_su", "line"]]},
+		{"text": "제갈량 고양이가 앞발로\n돌멩이 여덟 개를 늘어놓았어요.\n\"둘이서 팔진도를 풀어 보렴.\"", "btn": "시험이다!", "cast": [["zhuge_liang", "half"]]},
+		{"text": "마속 고양이는 말로 술술 설명했고,\n강유 강아지는 앞발로\n돌을 하나하나 옮겨 보았어요.", "btn": "둘 다 열심히!", "cast": [["ma_su", "squint"], ["jiang_wei", "line"]]},
+		{"text": "해가 지도록 돌이 맞지 않자\n마속 고양이가 슬쩍 다가와 돌 하나를 툭 밀었어요.\n\"...여기가 틀렸잖아, 바보야.\"", "btn": "큭큭큭!", "cast": [["ma_su", "half"], ["jiang_wei", "squint"]]},
+		{"text": "제갈량 고양이는 두 제자를 꼬리로 폭 감싸 안았어요.\n\"너희 둘이 함께라면 촉은 걱정 없겠구나.\"", "btn": "스승님!", "cast": [["zhuge_liang", "squint"], ["ma_su", "squint"], ["jiang_wei", "squint"]], "party": true},
+		{"text": "하지만 그 바람은 오래가지 못했답니다.\n가정으로 떠나는 날이 다가오고 있었거든요...", "btn": "그 뒤에는...", "cast": [["ma_su", "half"]]},
+	]},
+	"sp_weeping": {"title": "울면서 내린 벌", "adult": ["ma_liang", "ma_su", "zhuge_liang"], "after": ["sp_twodisc"], "pages": [
+		{"text": "마량 고양이는 하얀 눈썹이 멋진 형이었어요.\n동생 마속 고양이를 늘 꼬리로 토닥여 주었지요.", "btn": "다정해", "cast": [["ma_liang", "squint"], ["ma_su", "squint"]]},
+		{"text": "어느 날 먼 길을 떠나는 마량 고양이가\n제갈량 고양이의 앞발을 꼭 잡았어요.\n\"제 동생, 잘 부탁해요.\"", "btn": "걱정 마요", "cast": [["ma_liang", "half"], ["zhuge_liang", "squint"]]},
+		{"text": "마량 고양이는 끝내 돌아오지 못했어요.\n제갈량 고양이는 마속 고양이를 더욱 아꼈답니다.", "btn": "마량..", "cast": [["zhuge_liang", "closed", "tears"], ["ma_su", "closed", "tears"]]},
+		{"text": "가정을 지키러 가는 날, 제갈량 고양이가 말했어요.\n\"꼭 길목에 진을 쳐야 한다. 약속하렴.\"", "btn": "약속!", "cast": [["zhuge_liang", "line"], ["ma_su", "squint"]]},
+		{"text": "하지만 마속 고양이는 수염을 쓱 넘기더니\n\"높은 데가 더 멋지잖아요!\"\n하며 산 위로 올라갔어요.", "btn": "어어..?", "cast": [["ma_su", "squint"]]},
+		{"text": "장합 강아지가 산을 빙 둘러싸고 물길을 끊었어요.\n목이 바짝 마른 마속 고양이는\n결국 지고 말았지요.", "btn": "안 돼!", "cast": [["zhang_he", "line"], ["ma_su", "closed", "tears"]]},
+		{"text": "제갈량 고양이는 눈물을 뚝뚝 흘리며 말했어요.\n\"약속을 어기면... 벌을 받아야 한단다.\"", "btn": "흑흑..", "cast": [["zhuge_liang", "closed", "tears"]]},
+		{"text": "마속 고양이는 귀를 축 내리고 고개를 숙였어요.\n하늘 위 하얀 눈썹 같은 구름이\n조용히 내려다보았답니다.", "btn": "마속..", "cast": [["ma_su", "closed", "tears"]]},
+	]},
+	"sp_zhugeson": {"title": "깃털 부채를 물려받은 아이", "adult": ["zhuge_liang", "zhuge_qiao", "zhuge_zhan"], "after": ["sp_wuzhang"], "pages": [
+		{"text": "오나라의 제갈근 고양이가\n아들 제갈교 고양이를 꼭 안아 주었어요.\n\"오늘부터 작은아빠 집에서 지내렴.\"", "btn": "잘 다녀와!", "cast": [["zhuge_jin", "squint", "tears"], ["zhuge_qiao", "open"]]},
+		{"text": "촉에 온 제갈교 고양이를\n제갈량 고양이가 꼬리로 폭 감싸 안았어요.\n\"이제 너는 내 아들이란다.\"", "btn": "따뜻해..", "cast": [["zhuge_liang", "squint"], ["zhuge_qiao", "squint"]]},
+		{"text": "얼마 뒤 아기 제갈첨 고양이가 태어났어요.\n제갈교 고양이는 동생의 젤리를\n콕콕 누르며 좋아했지요.", "btn": "귀여워!", "cast": [["zhuge_qiao", "squint"], ["zhuge_zhan", "open"]]},
+		{"text": "제갈량 고양이는 형에게 편지를 썼어요.\n\"첨이는 너무 영리해서\n오히려 걱정이에요.\"", "btn": "아빠 마음..", "cast": [["zhuge_liang", "half"]]},
+		{"text": "형 제갈교 고양이는 북벌 길에\n무거운 짐수레를 끌다가\n끝내 돌아오지 못했어요.", "btn": "형..", "cast": [["zhuge_zhan", "closed", "tears"]]},
+		{"text": "세월이 흘러 어른이 된 제갈첨 고양이 앞에\n등애 강아지의 군사가 몰려왔어요.", "btn": "큰일이다!", "cast": [["deng_ai", "line"], ["zhuge_zhan", "open"]]},
+		{"text": "제갈첨 고양이는 아빠의 깃털 부채를\n앞발로 꼭 쥐었어요.\n\"아버지, 형, 저도 끝까지 지킬게요!\"", "btn": "제갈첨!", "cast": [["zhuge_zhan", "line"]]},
+		{"text": "면죽의 바람이\n부채 깃털을 살랑살랑 흔들었답니다.", "btn": "그 뒤에는...", "cast": [["zhuge_zhan", "closed"]]},
 	]},
 }

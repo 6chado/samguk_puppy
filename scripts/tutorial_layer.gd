@@ -48,7 +48,7 @@ func show_step(text: String, step_targets: Array, is_action: bool) -> void:
 	targets = step_targets
 	action = is_action
 	_label.text = text
-	_hint.text = "반짝이는 곳을 눌러 보세요!" if is_action else "화면을 눌러 계속 →"
+	_hint.text = tr("반짝이는 곳을 눌러 보세요!") if is_action else tr("화면을 눌러 계속 →")
 	show()
 	move_to_front()
 	set_process(true)

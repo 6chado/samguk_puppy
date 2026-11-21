@@ -3,7 +3,8 @@ extends Node
 ## 웹에서는 user:// 가 브라우저 IndexedDB에 저장돼서 새로고침해도 유지됨
 ## 저장 방식은 아래 "저장 / 불러오기" 설명 참고
 
-const SAVE_PATH := "user://save.json"
+const Lang = preload("res://scripts/lang.gd")
+const SAVE_PATH: String = Lang.SAVE_FILE   # 언어판마다 세이브 파일 따로
 
 var owned: Array[String] = []     # 데리고 있는 멍냥이 (= 도감에 모은 멍냥이)
 var tickets := 0                  # 뽑기권

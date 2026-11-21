@@ -9,7 +9,7 @@ var _t := 0.0
 
 
 func setup(text_: String, from: Color, to: Color, font_px: int) -> void:
-	text = text_
+	text = tr(text_)
 	c1 = from
 	c2 = to
 	px = font_px

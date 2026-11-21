@@ -11,7 +11,7 @@ var _t := 0.0
 
 
 func setup(text_: String, base_: Color, mode_: String, font_px: int) -> void:
-	text = text_
+	text = tr(text_)
 	base = base_
 	mode = mode_
 	add_theme_font_size_override("font_size", font_px)

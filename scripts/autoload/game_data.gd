@@ -1,6 +1,43 @@
 extends Node
 ## 게임 데이터 & 밸런스 수치. 숫자 조절은 전부 여기서.
 
+# ── 언어 ─────────────────────────────────────────
+## 원문(한국어)이 번역표의 열쇠. 화면에 띄울 때 tr()로 바꿔 줌 (Godot 번역 기능)
+const Lang = preload("res://scripts/lang.gd")
+
+
+## 번역은 다른 스크립트들이 만들어지기 전에 미리 불러 둠 (_ready는 너무 늦을 수 있음)
+func _init() -> void:
+	_load_language()
+
+
+func _load_language() -> void:
+	var lang: String = Lang.LANG
+	if lang != "ko" and Lang.TABLES.has(lang) and ResourceLoader.exists(Lang.TABLES[lang]):
+		var table: Dictionary = load(Lang.TABLES[lang]).MSG
+		var t := Translation.new()
+		t.locale = lang
+		for k in table:
+			if str(table[k]) != "":
+				t.add_message(k, table[k])
+		TranslationServer.add_translation(t)
+	TranslationServer.set_locale(lang)
+
+
+func is_ko() -> bool:
+	return Lang.LANG == "ko"
+
+
+## 언어별 글자 크기 배율
+func font_scale() -> float:
+	return float(Lang.FONT_SCALES.get(Lang.LANG, 1.0))
+
+
+## 언어별 글꼴 경로 (없으면 빈 문자열)
+func font_path() -> String:
+	var p: String = Lang.FONTS.get(Lang.LANG, "")
+	return p if p != "" and ResourceLoader.exists(p) else ""
+
 # ── 성장 ─────────────────────────────────────────
 const STAGE_NAMES: Array[String] = ["새끼강아지", "개초딩", "개청소년", "어른강아지"]
 const CAT_STAGE_NAMES: Array[String] = ["새끼고양이", "캣초딩", "캣청년", "어른고양이"]
@@ -123,6 +160,10 @@ const DOGS := {
 	"zhao_yun":    {"name": "조운",   "faction": "shu", "role": "warrior",    "color": Color(0.96, 0.95, 0.92)},
 	"jiang_wei":   {"name": "강유",   "faction": "shu", "role": "warrior",    "color": Color(0.82, 0.62, 0.36)},
 	"zhuge_liang": {"name": "제갈량", "faction": "shu", "role": "strategist", "color": Color(0.98, 0.96, 0.90)},
+	"ma_liang":    {"name": "마량",   "faction": "shu", "role": "strategist", "color": Color(0.91, 0.66, 0.38)},
+	"ma_su":       {"name": "마속",   "faction": "shu", "role": "strategist", "color": Color(0.91, 0.66, 0.38)},
+	"zhuge_qiao":  {"name": "제갈교", "faction": "shu", "role": "strategist", "color": Color(0.69, 0.71, 0.75)},
+	"zhuge_zhan":  {"name": "제갈첨", "faction": "shu", "role": "strategist", "color": Color(0.69, 0.71, 0.75)},
 	"pang_tong":   {"name": "방통",   "faction": "shu", "role": "strategist", "color": Color(0.62, 0.52, 0.38)},
 	"ma_chao":     {"name": "마초",   "faction": "shu", "role": "warrior",    "color": Color(0.69, 0.44, 0.24)},
 	"fa_zheng":    {"name": "법정",   "faction": "shu", "role": "strategist", "color": Color(0.42, 0.46, 0.55)},
@@ -226,6 +267,8 @@ const PLAY_CHANCE_OTHER := 0.35       # 다른 진영: 35% 확률로만 +1 (평�
 ## 주군(유비·조조·손권)끼리는 따로 적지 않아도 자동으로 앙숙
 const HATES := [
 	["zhang_he", "zhuge_liang"],    # 목문도에서 제갈량의 매복에
+	["zhang_he", "ma_su"],          # 가정에서 물길을 끊어 이김
+	["deng_ai", "zhuge_zhan"],      # 면죽에서 맞섬
 	["li_dian", "sun_quan"],        # 합비 전투
 	["xiahou_ba", "sima_yi"],       # 고평릉 사변 → 촉으로 망명
 	["sima_shi", "xiahou_ba"],
@@ -449,9 +492,9 @@ func rank_name(dog_id: String, lv: int) -> String:
 	if lv <= 0:
 		return ""
 	if is_emperor_lv(dog_id, lv) and EMPEROR_NAMES.has(dog_id):
-		return EMPEROR_NAMES[dog_id][0]
+		return tr(EMPEROR_NAMES[dog_id][0])
 	var ranks: Array[String] = STRAT_RANKS if is_strategist(dog_id) else WAR_RANKS
-	return ranks[mini(lv, ranks.size()) - 1]
+	return tr(ranks[mini(lv, ranks.size()) - 1])
 
 
 # ── 선물 / 의형제 ──────────────────────────────
@@ -465,7 +508,7 @@ const SWEAR_CHANCE_OTHER := 0.10
 const SWORN_MAX := 3                  # 한 멍냥이당 의형제 최대 3명 (주군도 똑같이)
 
 # ── 신뢰 / 가족 ──────────────────────────────────
-## 신뢰 관계: 고백(하트)·의형제(복숭아)에 필요한 칸이 각각 하나씩 줄어듦 (4 → 3). 한 멍냥이당 최대 2명 (강유 4명, 장료 3명은 예외)
+## 신뢰 관계: 고백(하트)·의형제(복숭아)에 필요한 칸이 각각 하나씩 줄어듦 (4 → 3). 한 멍냥이당 최대 2명 (강유 4명, 장료·제갈량 3명은 예외)
 const TRUST_BONUS := 1
 const TRUST := [
 	["zhang_he", "xiahou_yuan"],    # 한중에서 함께 싸움
@@ -483,6 +526,10 @@ const TRUST := [
 	# 촉
 	["liu_bei", "guan_yu"], ["liu_bei", "zhang_fei"], ["guan_yu", "zhang_fei"],   # 도원 삼형제
 	["zhuge_liang", "jiang_wei"],     # 후계자
+	["zhuge_liang", "ma_su"],         # 아끼던 제자 (제갈량은 신뢰 3명 예외)
+	["ma_liang", "ma_su"],            # 형이 늘 감싸 준 동생
+	["zhuge_qiao", "zhuge_zhan"],     # 동생을 아낀 형
+	["zhuge_qiao", "zhuge_jin"],      # 친아빠
 	["zhuge_liang", "zhao_yun"],      # 유비가 맡긴 뒷일을 함께 지킨 두 충신
 	["pang_tong", "xu_shu"],          # 함께 제갈량을 아는 벗
 	["zhao_yun", "liu_shan"],         # 장판파에서 구한 아두
@@ -562,6 +609,7 @@ const GROUP_TITLES: Array = [
 	{"name": "조씨 부자", "members": ["cao_cao", "cao_pi"]},
 	{"name": "촉의 마지막 불꽃", "members": ["jiang_wei", "xiahou_ba", "ma_dai", "liu_shan"]},
 	{"name": "낙양의 황실", "members": ["he_taihou", "wang_meiren", "liu_bian", "liu_xie"]},
+	{"name": "제갈 가문", "members": ["zhuge_jin", "zhuge_liang", "zhuge_qiao", "zhuge_zhan"]},
 ]
 
 
@@ -610,6 +658,13 @@ const FAMILY := [
 	["liu_bang", "fan_kuai"],       # 동서
 	["liu_bang", "lu_zhi"],         # 부부
 	# 후한 황실 네 식구 (서로 모두 가족)
+	["ma_liang", "ma_su"],          # 마씨 형제 (백미 형 + 동생)
+	# 제갈 가문
+	["zhuge_liang", "zhuge_qiao"],  # 양자
+	["zhuge_liang", "zhuge_zhan"],  # 친아들
+	["zhuge_qiao", "zhuge_zhan"],   # 형제
+	["zhuge_jin", "zhuge_qiao"],    # 친아빠
+	["zhuge_jin", "zhuge_zhan"],    # 큰아빠
 	["liu_bian", "liu_xie"],        # 형제
 	["he_taihou", "liu_bian"],      # 엄마 - 아들
 	["wang_meiren", "liu_xie"],     # 엄마 - 아들
@@ -726,11 +781,11 @@ func is_cat(dog_id: String) -> bool:
 
 
 func species(dog_id: String) -> String:
-	return "고양이" if is_cat(dog_id) else "강아지"
+	return tr("고양이") if is_cat(dog_id) else tr("강아지")
 
 
 func stage_name(stage: int, dog_id: String) -> String:
-	return (CAT_STAGE_NAMES if is_cat(dog_id) else STAGE_NAMES)[stage]
+	return tr((CAT_STAGE_NAMES if is_cat(dog_id) else STAGE_NAMES)[stage])
 
 
 ## 화면에 보이는 음식 그림 id (고양이는 고고마 자리에 캣그라스)
@@ -742,8 +797,8 @@ func food_icon_id(food_id: String, dog_id: String) -> String:
 
 func food_name(food_id: String, dog_id: String) -> String:
 	if food_icon_id(food_id, dog_id) == "cat_grass":
-		return "캣그라스"
-	return FOODS[food_id]["name"]
+		return tr("캣그라스")
+	return tr(FOODS[food_id]["name"])
 
 
 func roll_food() -> String:

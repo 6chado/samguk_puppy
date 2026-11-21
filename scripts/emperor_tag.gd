@@ -18,7 +18,7 @@ var _t := 0.0
 
 
 func setup(text_: String, theme_: String, font_px: int) -> void:
-	text = text_
+	text = tr(text_)
 	theme_key = theme_ if THEMES.has(theme_) else "gold"
 	px = font_px
 	mouse_filter = MOUSE_FILTER_IGNORE
