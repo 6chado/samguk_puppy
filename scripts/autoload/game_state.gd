@@ -587,6 +587,16 @@ func load_game() -> void:
 					dir.remove(CORRUPT_PATH.get_file())
 				dir.copy(SAVE_PATH, CORRUPT_PATH)
 			push_warning("세이브 파일이 깨져서 백업에서 불러옵니다")
+	# 다른 언어판 세이브에 진행이 더 많으면 그걸로 이어하기
+	# (한국어판 주소에 다른 언어 빌드가 잘못 올라갔던 기간에 플레이한 진행을 살리려고)
+	if Lang.LANG == "ko":
+		var best = data
+		for code in ["ja", "en", "zh_CN", "zh_TW"]:
+			var other = _read_json("user://save_" + code + ".json")
+			if other != null and _save_rank(other) > _save_rank(best):
+				best = other
+				_loaded_from = "lang_" + code
+		data = best
 	if data == null:
 		_loaded_from = "new"
 		return
@@ -594,6 +604,17 @@ func load_game() -> void:
 	print("[세이브] 불러옴: %s (멍냥이 %d마리, 뽑기권 %d)" % [_loaded_from, owned.size(), tickets])
 	if _loaded_from != "main":
 		save_game()   # 복구했으면 바로 정상 파일로 다시 저장
+
+
+## 세이브 비교용 점수: 모은 멍냥이 수가 많을수록, 같으면 더 최근 저장일수록 높음
+func _save_rank(d) -> float:
+	if not (d is Dictionary):
+		return -1.0
+	var n := 0
+	var o = d.get("owned", [])
+	if o is Array:
+		n = o.size()
+	return n * 1.0e10 + float(d.get("saved_at", 0))
 
 
 ## 읽은 데이터를 검사하면서 적용 (이상한 값은 버리거나 고침)

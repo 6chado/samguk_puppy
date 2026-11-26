@@ -1,7 +1,7 @@
 extends RefCounted
 ## ── 언어 설정 ───────────────────────────────────────────
 ## 언어판마다 이 한 줄만 바꿔서 내보내요: "ko" / "en" / "ja" / "zh_CN"(간체) / "zh_TW"(번체)
-const LANG := "ja"
+const LANG := "ko"
 ## 세이브 파일은 언어별로 따로 (같은 주소에서 돌려도 섞이지 않게)
 const SAVE_FILE := "user://save.json" if LANG == "ko" else "user://save_" + LANG + ".json"
 
